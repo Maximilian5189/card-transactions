@@ -26,7 +26,7 @@ func (handler *Handler) handleErr(err error, w http.ResponseWriter) error {
 
 func (handler *Handler) GetTransactions() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactions()
+		d, err := db.NewTransactionsDB()
 		if handler.handleErr(err, w) != nil {
 			return
 		}
@@ -44,7 +44,7 @@ func (handler *Handler) GetTransactions() func(http.ResponseWriter, *http.Reques
 
 func (handler *Handler) PostTransaction() func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactions()
+		d, err := db.NewTransactionsDB()
 		if handler.handleErr(err, w) != nil {
 			return
 		}
