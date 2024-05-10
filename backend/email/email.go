@@ -23,18 +23,19 @@ func NewEmailService(logger logger.Logger) EmailService {
 	return EmailService{logger}
 }
 
-func getMerchant(body string) string {
+func getValue(body string, key string) string {
 	lines := strings.Split(body, "\n")
 
 	var merchantLine string
 	for _, line := range lines {
-		if strings.HasPrefix(line, "Merchant:") {
+		if strings.HasPrefix(line, fmt.Sprintf("%s:", key)) {
 			merchantLine = line
 			break
 		}
 	}
 
-	re := regexp.MustCompile(`Merchant:\s*(.*)`)
+	regex := fmt.Sprintf("%s:", key) + `\s*(.*)`
+	re := regexp.MustCompile(regex)
 	match := re.FindStringSubmatch(merchantLine)
 	if len(match) > 1 {
 		return match[1]
@@ -42,7 +43,7 @@ func getMerchant(body string) string {
 	return ""
 }
 
-func (e *EmailService) GetEmails() error {
+func (e *EmailService) GetEmails() {
 	ctx := context.Background()
 	client := auth.GetClient()
 
@@ -59,7 +60,7 @@ func (e *EmailService) GetEmails() error {
 
 	d, err := db.NewTransactionsDB()
 	if err != nil {
-		return err
+		e.logger.Error(fmt.Sprintf("Unable to open DB: %v", err))
 	}
 
 	for _, m := range r.Messages {
@@ -95,7 +96,15 @@ func (e *EmailService) GetEmails() error {
 			}
 
 			body := string(bodyBytes)
-			transaction.Name = getMerchant(body)
+			name := getValue(body, "Merchant")
+			if name != "" {
+				transaction.Name = name
+			}
+
+			amount := getValue(body, "Amount")
+			if amount != "" {
+				transaction.Amount = amount
+			}
 
 		} else if len(msg.Payload.Parts) > 0 {
 			for _, part := range msg.Payload.Parts {
@@ -103,12 +112,17 @@ func (e *EmailService) GetEmails() error {
 					if part.Body.Data != "" {
 						bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
 						if err != nil {
-							e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
+							e.logger.Error(fmt.Sprintf("error getting content: %v", err))
 						}
 						body := string(bodyBytes)
-						name := getMerchant(body)
+						name := getValue(body, "Merchant")
 						if name != "" {
-							transaction.Name = getMerchant(body)
+							transaction.Name = name
+						}
+
+						amount := getValue(body, "Amount")
+						if amount != "" {
+							transaction.Amount = amount
 						}
 					}
 				}
@@ -117,6 +131,4 @@ func (e *EmailService) GetEmails() error {
 		err = d.Insert(transaction)
 		e.logger.Error(fmt.Sprintf("DB insert err: %v", err))
 	}
-
-	return err
 }

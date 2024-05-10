@@ -25,10 +25,7 @@ func main() {
 	r := mux.NewRouter()
 
 	e := email.NewEmailService(logger)
-	err := e.GetEmails()
-	if err != nil {
-		logger.Error(err.Error())
-	}
+	go e.GetEmails()
 
 	r.HandleFunc("/transactions", h.GetTransactions()).Methods("GET")
 	r.HandleFunc("/transactions", h.PostTransaction()).Methods("POST")

@@ -11,6 +11,7 @@ type Transaction struct {
 	Name      string `json:"name"`
 	MessageID string `json:"messageID"`
 	Date      string `json:"date"`
+	Amount    string `json:"amount"`
 }
 
 type TransactionsDB struct {
@@ -23,7 +24,7 @@ func NewTransactionsDB() (*TransactionsDB, error) {
 		return nil, err
 	}
 	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date TEXT)")
+		"CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date TEXT, amount TEXT)")
 	if err != nil {
 		return nil, err
 	}
@@ -34,13 +35,13 @@ func NewTransactionsDB() (*TransactionsDB, error) {
 
 func (t *TransactionsDB) Insert(transaction Transaction) error {
 	_, err := t.db.Exec(
-		"INSERT INTO transactions (name, messageid, date) VALUES(?,?,?);",
-		transaction.Name, transaction.MessageID, transaction.Date)
+		"INSERT INTO transactions (name, messageid, date, amount) VALUES(?,?,?,?);",
+		transaction.Name, transaction.MessageID, transaction.Date, transaction.Amount)
 	return err
 }
 
 func (t *TransactionsDB) Select() ([]Transaction, error) {
-	rows, err := t.db.Query("SELECT name, messageid, date FROM transactions")
+	rows, err := t.db.Query("SELECT name, messageid, date, amount FROM transactions")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -50,7 +51,7 @@ func (t *TransactionsDB) Select() ([]Transaction, error) {
 	for rows.Next() {
 		transaction := Transaction{}
 
-		err = rows.Scan(&transaction.Name, &transaction.MessageID, &transaction.Date)
+		err = rows.Scan(&transaction.Name, &transaction.MessageID, &transaction.Date, &transaction.Amount)
 		if err != nil {
 			// TODO return with error? Or what?
 			return nil, err
