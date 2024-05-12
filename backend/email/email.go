@@ -70,19 +70,24 @@ func (e *EmailService) GetEmails() {
 			e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
 		}
 
+		isDiscover := false
 		transaction := db.Transaction{}
 		for _, h := range msg.Payload.Headers {
 			if h.Name == "Date" {
 				transaction.Date = h.Value
 			} else if h.Name == "From" {
-				if !strings.Contains(h.Value, "Discover") {
-					continue
+				if strings.Contains(h.Value, "Discover") {
+					isDiscover = true
 				}
 			}
 
 			if h.Name == "Message-ID" {
 				transaction.MessageID = h.Value
 			}
+		}
+
+		if !isDiscover {
+			continue
 		}
 
 		if msg.Payload.Body.Data != "" {
