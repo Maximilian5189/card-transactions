@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
@@ -21,14 +22,29 @@ func loggingMiddleware(logger logger.Logger) func(http.Handler) http.Handler {
 
 func main() {
 	logger := logger.NewLogger()
-	h := handler.NewHandler(logger)
-	r := mux.NewRouter()
-
 	e := email.NewEmailService(logger)
 	go e.GetEmails()
 
-	r.HandleFunc("/transactions", h.GetTransactions()).Methods("GET")
-	r.HandleFunc("/transactions", h.PostTransaction()).Methods("POST")
+	// b, err := backup.New(logger)
+	// if err != nil {
+	// 	logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
+	// } else {
+	// 	b.Upload("/Users/ms/coding/card-transactions/backend/database.db") // TODO
+	// 	// TODO maybe as a separat script?
+	// 	b.Download("/Users/ms/coding/card-transactions/backend/database.db") // TODO
+	// }
+
+	h := handler.NewHandler(logger)
+	r := mux.NewRouter()
+
+	r.HandleFunc("/transactions", h.GetTransactions(logger)).Methods("GET")
+	r.HandleFunc("/transactions", h.PostTransaction(logger)).Methods("POST")
 	r.Use(loggingMiddleware(logger))
-	log.Fatal(http.ListenAndServe(":8080", r))
+
+	// // todo temporary solution
+	corsOptions := handlers.AllowedOrigins([]string{"*"})
+	corsHandler := handlers.CORS(corsOptions)
+	cr := corsHandler(r)
+
+	log.Fatal(http.ListenAndServe(":8080", cr))
 }

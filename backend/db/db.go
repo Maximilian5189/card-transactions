@@ -1,6 +1,7 @@
 package db
 
 import (
+	"backend/logger"
 	"database/sql"
 	"log"
 
@@ -8,6 +9,7 @@ import (
 )
 
 type Transaction struct {
+	Id        string `json:"id"`
 	Name      string `json:"name"`
 	MessageID string `json:"messageID"`
 	Date      string `json:"date"`
@@ -15,22 +17,22 @@ type Transaction struct {
 }
 
 type TransactionsDB struct {
-	db *sql.DB
+	logger logger.Logger
+	db     *sql.DB
 }
 
-func NewTransactionsDB() (*TransactionsDB, error) {
+func NewTransactionsDB(logger logger.Logger) (*TransactionsDB, error) {
 	db, err := sql.Open("sqlite3", "database.db")
 	if err != nil {
 		return nil, err
 	}
 	_, err = db.Exec(
-		"CREATE TABLE IF NOT EXISTS transactions (id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date TEXT, amount TEXT)")
+		"CREATE TABLE IF NOT EXISTS transactions " +
+			"(id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date TEXT, amount TEXT, owner TEXT)")
 	if err != nil {
 		return nil, err
 	}
-	return &TransactionsDB{
-		db: db,
-	}, nil
+	return &TransactionsDB{logger, db}, nil
 }
 
 func (t *TransactionsDB) Insert(transaction Transaction) error {
@@ -41,7 +43,7 @@ func (t *TransactionsDB) Insert(transaction Transaction) error {
 }
 
 func (t *TransactionsDB) Select() ([]Transaction, error) {
-	rows, err := t.db.Query("SELECT name, messageid, date, amount FROM transactions")
+	rows, err := t.db.Query("SELECT id, name, messageid, date, amount FROM transactions")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -51,10 +53,10 @@ func (t *TransactionsDB) Select() ([]Transaction, error) {
 	for rows.Next() {
 		transaction := Transaction{}
 
-		err = rows.Scan(&transaction.Name, &transaction.MessageID, &transaction.Date, &transaction.Amount)
+		err = rows.Scan(
+			&transaction.Id, &transaction.Name, &transaction.MessageID, &transaction.Date, &transaction.Amount)
 		if err != nil {
-			// TODO return with error? Or what?
-			return nil, err
+			t.logger.Error(err.Error())
 		}
 		transactions = append(transactions, transaction)
 	}

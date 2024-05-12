@@ -24,9 +24,9 @@ func (handler *Handler) handleErr(err error, w http.ResponseWriter) error {
 	return err
 }
 
-func (handler *Handler) GetTransactions() func(http.ResponseWriter, *http.Request) {
+func (handler *Handler) GetTransactions(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactionsDB()
+		d, err := db.NewTransactionsDB(logger)
 		if handler.handleErr(err, w) != nil {
 			return
 		}
@@ -42,14 +42,14 @@ func (handler *Handler) GetTransactions() func(http.ResponseWriter, *http.Reques
 
 }
 
-func (handler *Handler) PostTransaction() func(http.ResponseWriter, *http.Request) {
+func (handler *Handler) PostTransaction(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactionsDB()
+		d, err := db.NewTransactionsDB(logger)
 		if handler.handleErr(err, w) != nil {
 			return
 		}
 
-		transaction := db.Transaction{Name: "Jörg"}
+		transaction := db.Transaction{Name: "Jörg"} // TODO lol
 		err = d.Insert(transaction)
 		if handler.handleErr(err, w) != nil {
 			return

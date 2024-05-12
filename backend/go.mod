@@ -9,6 +9,12 @@ require (
 )
 
 require (
+	github.com/aws/aws-sdk-go v1.53.0 // indirect
+	github.com/gorilla/handlers v1.5.2 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+)
+
+require (
 	cloud.google.com/go/auth v0.3.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
 	cloud.google.com/go/compute/metadata v0.3.0 // indirect
