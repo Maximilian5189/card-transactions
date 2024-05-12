@@ -5,6 +5,7 @@ import (
 	"backend/logger"
 	"encoding/json"
 	"net/http"
+	"time"
 )
 
 type Handler struct {
@@ -31,7 +32,18 @@ func (handler *Handler) GetTransactions(logger logger.Logger) func(http.Response
 			return
 		}
 
-		transactions, err := d.Select()
+		// TODO maybe move from/to logic to frontend?
+		now := time.Now()
+		offset := int(time.Monday - now.Weekday())
+		if offset > 0 {
+			offset -= 7 // Adjust for the week starting on Monday
+		}
+		from := now.AddDate(0, 0, offset)
+		from = time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, from.Location())
+
+		to := from.AddDate(0, 0, 6)
+		to = time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 0, to.Location())
+		transactions, err := d.Select(from.Unix(), to.Unix())
 		if handler.handleErr(err, w) != nil {
 			return
 		}

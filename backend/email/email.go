@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"google.golang.org/api/gmail/v1"
 	"google.golang.org/api/option"
@@ -74,7 +75,19 @@ func (e *EmailService) GetEmails() {
 		transaction := db.Transaction{}
 		for _, h := range msg.Payload.Headers {
 			if h.Name == "Date" {
-				transaction.Date = h.Value
+				sanitized := strings.ReplaceAll(h.Value, "(UTC)", "")
+				sanitized = strings.ReplaceAll(sanitized, "(CET)", "")
+				sanitized = strings.ReplaceAll(sanitized, "(GMT)", "")
+				sanitized = strings.ReplaceAll(sanitized, "(EST)", "")
+				sanitized = strings.TrimSpace(sanitized)
+				layout := "Mon, 2 Jan 2006 15:04:05 -0700"
+				t, err := time.Parse(layout, sanitized)
+				if err != nil {
+					e.logger.Error(fmt.Sprintf("Unable to convert date: %v", err))
+					transaction.Date = time.Now().Unix()
+				} else {
+					transaction.Date = t.Unix()
+				}
 			} else if h.Name == "From" {
 				if strings.Contains(h.Value, "Discover") {
 					isDiscover = true

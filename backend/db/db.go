@@ -12,7 +12,7 @@ type Transaction struct {
 	Id        string `json:"id"`
 	Name      string `json:"name"`
 	MessageID string `json:"messageID"`
-	Date      string `json:"date"`
+	Date      int64  `json:"date"`
 	Amount    string `json:"amount"`
 }
 
@@ -28,7 +28,7 @@ func NewTransactionsDB(logger logger.Logger) (*TransactionsDB, error) {
 	}
 	_, err = db.Exec(
 		"CREATE TABLE IF NOT EXISTS transactions " +
-			"(id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date TEXT, amount TEXT, owner TEXT)")
+			"(id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date INTEGER, amount TEXT, owner TEXT)")
 	if err != nil {
 		return nil, err
 	}
@@ -42,8 +42,9 @@ func (t *TransactionsDB) Insert(transaction Transaction) error {
 	return err
 }
 
-func (t *TransactionsDB) Select() ([]Transaction, error) {
-	rows, err := t.db.Query("SELECT id, name, messageid, date, amount FROM transactions")
+func (t *TransactionsDB) Select(from int64, to int64) ([]Transaction, error) {
+	rows, err := t.db.Query(
+		"SELECT id, name, messageid, date, amount FROM transactions where date > ? and date < ?", from, to)
 	if err != nil {
 		log.Fatal(err)
 	}
