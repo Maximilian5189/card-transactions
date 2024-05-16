@@ -72,6 +72,8 @@ func (e *EmailService) GetEmails() {
 		}
 
 		isDiscover := false
+		dateError := false
+		from := ""
 		transaction := db.Transaction{}
 		for _, h := range msg.Payload.Headers {
 			if h.Name == "Date" {
@@ -83,12 +85,14 @@ func (e *EmailService) GetEmails() {
 				layout := "Mon, 2 Jan 2006 15:04:05 -0700"
 				t, err := time.Parse(layout, sanitized)
 				if err != nil {
+					dateError = true
 					e.logger.Error(fmt.Sprintf("Unable to convert date: %v", err))
 					transaction.Date = time.Now().Unix()
 				} else {
 					transaction.Date = t.Unix()
 				}
 			} else if h.Name == "From" {
+				from = h.Value
 				if strings.Contains(h.Value, "Discover") {
 					isDiscover = true
 				}
@@ -97,6 +101,9 @@ func (e *EmailService) GetEmails() {
 			if h.Name == "Message-ID" {
 				transaction.MessageID = h.Value
 			}
+		}
+		if dateError {
+			e.logger.Info("attention! Date error for email from " + from)
 		}
 
 		if !isDiscover {
@@ -125,7 +132,7 @@ func (e *EmailService) GetEmails() {
 				if part.MimeType == "text/plain" || part.MimeType == "text/html" {
 					if part.Body.Data != "" {
 						bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
-						if err != nil {
+						if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
 							e.logger.Error(fmt.Sprintf("error getting content: %v", err))
 						}
 						body := string(bodyBytes)
@@ -143,6 +150,10 @@ func (e *EmailService) GetEmails() {
 			}
 		}
 		err = d.Insert(transaction)
-		e.logger.Error(fmt.Sprintf("DB insert err: %v", err))
+		// we always process all emails and messageid UNIQUE constraint on DB level avoids duplicates
+		// so we don't log these errors to not clutter the logs, as these errors are expected
+		if err != nil && !strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			e.logger.Error(fmt.Sprintf("DB insert err: %v", err))
+		}
 	}
 }
