@@ -40,7 +40,7 @@ func (handler *Handler) GetTransactions(logger logger.Logger) func(http.Response
 			if handler.handleErr(err, w) != nil {
 				return
 			}
-			from = time.Unix(fromInt64, 0)
+			from = time.Unix(fromInt64/1000, 0)
 		} else {
 			now := time.Now()
 			offset := int(time.Monday - now.Weekday())
