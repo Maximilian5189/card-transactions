@@ -19,3 +19,14 @@ export function getStartOfWeekTimestamp(offset = 0) {
 
 	return startOfWeek.getTime();
 }
+
+export const getTransactionsTotal = async (timestamp: number, token: string) => {
+	const res = await fetch(`http://localhost:8080/transactions?from=${timestamp}&t=${token}`);
+
+	const transactions = await res.json();
+	let total = 0;
+	transactions.forEach((transaction: transaction) => {
+		total += Number(transaction.amount);
+	});
+	return Math.round(total * 100) / 100;
+};
