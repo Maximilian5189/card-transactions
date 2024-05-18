@@ -44,6 +44,10 @@ func main() {
 	logger := logger.NewLogger()
 	e := email.NewEmailService(logger)
 
+	if os.Getenv("TOKEN") == "" {
+		log.Fatal("missing token")
+	}
+
 	go e.GetEmails()
 
 	ticker := time.NewTicker(15 * time.Minute)
@@ -77,13 +81,9 @@ func main() {
 	r.Use(loggingMiddleware(logger))
 	r.Use(AuthMiddleware)
 
-	// // todo add fly (or maybe not needed?)
-	// corsOptions := handlers.AllowedOrigins([]string{"http://localhost:"})
-	// corsHandler := handlers.CORS(corsOptions)
-	// cr := corsHandler(r)
-
 	isLocalhost := func(origin string) bool {
-		return strings.HasPrefix(origin, "http://localhost")
+		return strings.HasPrefix(origin, "http://localhost") ||
+			strings.HasPrefix(origin, "https://card-transactions-frontend.fly.dev")
 	}
 
 	cr := handlers.CORS(

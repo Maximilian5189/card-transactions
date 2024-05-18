@@ -1,10 +1,12 @@
 // place files you want to import through the `$lib` alias in this folder.
+const isDev = import.meta.env.MODE === 'development';
 
 export type transaction = {
 	date: number;
 	name: string;
 	amount: number;
 };
+export const server = isDev ? 'http://localhost:8080' : 'https://card-transactions-backend.fly.dev';
 
 export function getStartOfWeekTimestamp(offset = 0) {
 	const today = new Date();
@@ -21,7 +23,7 @@ export function getStartOfWeekTimestamp(offset = 0) {
 }
 
 export const getTransactionsTotal = async (timestamp: number, token: string) => {
-	const res = await fetch(`http://localhost:8080/transactions?from=${timestamp}&t=${token}`);
+	const res = await fetch(`${server}/transactions?from=${timestamp}&t=${token}`);
 
 	const transactions = await res.json();
 	let total = 0;

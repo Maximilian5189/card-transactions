@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getTransactionsTotal, type transaction, getStartOfWeekTimestamp } from '$lib';
+	import { getTransactionsTotal, type transaction, getStartOfWeekTimestamp, server } from '$lib';
 	import { useSelector, PluginPosition } from 'gridjs';
 	import Grid from 'gridjs-svelte';
 	import 'gridjs/dist/theme/mermaid.css';
@@ -38,7 +38,7 @@
 
 			return `Total: ${Math.round(total * 100) / 100}`;
 		},
-		position: PluginPosition.Footer
+		position: PluginPosition.Header
 	};
 
 	const getTransactions = (transactions: transaction[]) => {
@@ -57,19 +57,20 @@
 </script>
 
 <h1>Welcome to Jochen</h1>
+
+<div>total last week: {totalLastWeek}</div>
+
 <Grid
 	{columns}
 	sort
 	search
 	pagination={{ enabled: true, limit: 100 }}
 	server={{
-		url: `http://localhost:8080/transactions?t=${token}`,
+		url: `${server}/transactions?t=${token}`,
 		then: getTransactions
 	}}
 	plugins={[sumPlugin]}
 />
-
-<div>total last week: {totalLastWeek}</div>
 
 <style global>
 	@import 'https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css';
