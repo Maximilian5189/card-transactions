@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/backup"
 	"backend/email"
 	"backend/handler"
 	"backend/logger"
@@ -67,14 +68,31 @@ func main() {
 		}()
 	}
 
-	// b, err := backup.New(logger)
-	// if err != nil {
-	// 	logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
-	// } else {
-	// 	b.Upload("/Users/ms/coding/card-transactions/backend/database.db") // TODO
-	// 	// TODO maybe as a separat script?
-	// 	b.Download("/Users/ms/coding/card-transactions/backend/database.db") // TODO
-	// }
+	dir, err := os.Getwd()
+	if err != nil {
+		logger.Error(fmt.Sprintf("Error getting current directory: %s", err))
+	} else {
+		b, err := backup.New(logger)
+		if err != nil {
+			logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
+		} else {
+			ticker := time.NewTicker(24 * time.Hour)
+			quit := make(chan struct{})
+			go func() {
+				for {
+					select {
+					case <-ticker.C:
+						b.Upload(fmt.Sprintf("%s/database.db", dir))
+					case <-quit:
+						ticker.Stop()
+						return
+					}
+				}
+			}()
+			// TODO as a separat script
+			// b.Download("/Users/ms/coding/card-transactions/backend/database.db")
+		}
+	}
 
 	h := handler.NewHandler(logger)
 	r := mux.NewRouter()
@@ -87,8 +105,7 @@ func main() {
 
 	isLocalhost := func(origin string) bool {
 		return strings.HasPrefix(origin, "http://localhost") ||
-			strings.HasPrefix(origin, "https://card-transactions-frontend.fly.dev") ||
-			strings.HasPrefix(origin, "")
+			strings.HasPrefix(origin, "https://card-transactions-frontend.fly.dev")
 	}
 
 	cr := handlers.CORS(
