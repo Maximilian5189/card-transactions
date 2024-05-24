@@ -5,6 +5,7 @@ export type transaction = {
 	date: number;
 	name: string;
 	amount: number;
+	messageID?: string;
 };
 export const server = isDev ? 'http://localhost:8080' : 'https://card-transactions-backend.fly.dev';
 
@@ -22,13 +23,41 @@ export function getStartOfWeekTimestamp(offset = 0) {
 	return startOfWeek.getTime();
 }
 
-export const getTransactionsTotal = async (timestamp: number, token: string) => {
-	const res = await fetch(`${server}/transactions?from=${timestamp}&t=${token}`);
+export const getTransactions = async (timestamp: number, token: string) => {
+	let url = `${server}/transactions?t=${token}`;
+	if (timestamp) {
+		url += `&from=${timestamp}`;
+	}
+	const res = await fetch(url);
 
-	const transactions = await res.json();
+	return await res.json();
+};
+
+export const getTransactionsTotal = async (timestamp: number, token: string) => {
+	const transactions = await getTransactions(timestamp, token);
+
 	let total = 0;
 	transactions.forEach((transaction: transaction) => {
-		total += Number(transaction.amount);
+		total += transaction.amount;
 	});
 	return Math.round(total * 100) / 100;
+};
+
+export const postTransaction = async (transaction: transaction, token: string) => {
+	const randomNumber = Math.random() * 10000000;
+	transaction.messageID = randomNumber.toString();
+	const res = await fetch(`${server}/transaction?t=${token}`, {
+		method: 'POST',
+		body: JSON.stringify(transaction)
+	});
+	console.log(res.status);
+};
+
+export const deleteTransaction = async (id: string, token: string) => {
+	console.log(id);
+	const res = await fetch(`${server}/transaction?t=${token}&id=${id}`, {
+		method: 'DELETE',
+		mode: 'cors'
+	});
+	console.log(res.status);
 };

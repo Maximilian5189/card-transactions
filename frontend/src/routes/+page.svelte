@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { getTransactionsTotal, type transaction, getStartOfWeekTimestamp, server } from '$lib';
+	import {
+		getTransactionsTotal,
+		getStartOfWeekTimestamp,
+		getTransactions,
+		postTransaction,
+		deleteTransaction
+	} from '$lib';
 	import { useSelector, PluginPosition } from 'gridjs';
 	import Grid from 'gridjs-svelte';
 	import 'gridjs/dist/theme/mermaid.css';
@@ -41,36 +47,73 @@
 		position: PluginPosition.Header
 	};
 
-	const getTransactions = (transactions: transaction[]) => {
-		return transactions.map((transaction) => {
-			return [transaction.name, transaction.amount, transaction.date];
-		});
-	};
+	async function createNewTransactionHandler() {
+		let d;
+		if (date) {
+			d = new Date(date).valueOf();
+		} else {
+			d = new Date().valueOf();
+		}
+
+		const t = { name, amount, date: d };
+		await postTransaction(t, token);
+
+		data = await getTransactions(0, token);
+
+		name = '';
+		amount = 0;
+	}
+
+	async function deleteTransactionHandler() {
+		await deleteTransaction(id, token);
+		data = await getTransactions(0, token);
+		id = '';
+	}
 
 	let totalLastWeek = 0;
+	let weekMinusTwo = 0;
+	let data: any[] = [];
+	let name = '';
+	let amount = 0;
+	let id = '';
+	let date = '';
 	onMount(async () => {
 		token = $page.url.searchParams.get('t') || '';
 
-		const t = getStartOfWeekTimestamp(-1);
+		data = await getTransactions(0, token);
+
+		let t = getStartOfWeekTimestamp(-1);
 		totalLastWeek = await getTransactionsTotal(t, token);
+
+		t = getStartOfWeekTimestamp(-2);
+		weekMinusTwo = await getTransactionsTotal(t, token);
 	});
 </script>
 
 <h1>Welcome to Jochen</h1>
 
+<input type="text" bind:value={name} placeholder="name" />
+<input type="number" bind:value={amount} placeholder="amount" />
+<input type="date" bind:value={date} />
+
+<button on:click={createNewTransactionHandler}>Create new transaction</button>
+<br /><br />
+<input type="text" bind:value={id} placeholder="id" />
+<button on:click={deleteTransactionHandler}>Delete transaction</button>
+
 <div>total last week: {totalLastWeek}</div>
+<div>week before: {weekMinusTwo}</div>
 
 <Grid
 	{columns}
+	{data}
 	sort
 	search
 	pagination={{ enabled: true, limit: 100 }}
-	server={{
-		url: `${server}/transactions?t=${token}`,
-		then: getTransactions
-	}}
 	plugins={[sumPlugin]}
 />
+
+{JSON.stringify(data)}
 
 <style global>
 	@import 'https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css';
