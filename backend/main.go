@@ -41,28 +41,31 @@ func AuthMiddleware(next http.Handler) http.Handler {
 }
 
 func main() {
-	logger := logger.NewLogger()
-	e := email.NewEmailService(logger)
-
 	if os.Getenv("TOKEN") == "" {
 		log.Fatal("missing token")
 	}
 
-	go e.GetEmails()
+	logger := logger.NewLogger()
+	e, err := email.NewEmailService(logger)
 
-	ticker := time.NewTicker(15 * time.Minute)
-	quit := make(chan struct{})
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				e.GetEmails()
-			case <-quit:
-				ticker.Stop()
-				return
+	if err == nil {
+
+		go e.GetEmails()
+
+		ticker := time.NewTicker(15 * time.Minute)
+		quit := make(chan struct{})
+		go func() {
+			for {
+				select {
+				case <-ticker.C:
+					e.GetEmails()
+				case <-quit:
+					ticker.Stop()
+					return
+				}
 			}
-		}
-	}()
+		}()
+	}
 
 	// b, err := backup.New(logger)
 	// if err != nil {
@@ -77,17 +80,20 @@ func main() {
 	r := mux.NewRouter()
 
 	r.HandleFunc("/transactions", h.GetTransactions(logger)).Methods("GET")
-	r.HandleFunc("/transactions", h.PostTransaction(logger)).Methods("POST")
+	r.HandleFunc("/transaction", h.PostTransaction(logger)).Methods("POST")
+	r.HandleFunc("/transaction", h.DeleteTransaction(logger)).Methods("DELETE")
 	r.Use(loggingMiddleware(logger))
 	r.Use(AuthMiddleware)
 
 	isLocalhost := func(origin string) bool {
 		return strings.HasPrefix(origin, "http://localhost") ||
-			strings.HasPrefix(origin, "https://card-transactions-frontend.fly.dev")
+			strings.HasPrefix(origin, "https://card-transactions-frontend.fly.dev") ||
+			strings.HasPrefix(origin, "")
 	}
 
 	cr := handlers.CORS(
 		handlers.AllowedOriginValidator(isLocalhost),
+		handlers.AllowedMethods([]string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}),
 	)(r)
 
 	srv := &http.Server{

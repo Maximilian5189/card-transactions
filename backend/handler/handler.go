@@ -4,6 +4,7 @@ import (
 	"backend/db"
 	"backend/logger"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -71,10 +72,45 @@ func (handler *Handler) PostTransaction(logger logger.Logger) func(http.Response
 			return
 		}
 
-		transaction := db.Transaction{Name: "Jörg"} // TODO lol
+		body, err := io.ReadAll(r.Body)
+		if handler.handleErr(err, w) != nil {
+			return
+		}
+		defer r.Body.Close()
+
+		var transaction db.Transaction
+		err = json.Unmarshal(body, &transaction)
+		if handler.handleErr(err, w) != nil {
+			return
+		}
+		transaction.Date /= 1000
+
 		err = d.Insert(transaction)
 		if handler.handleErr(err, w) != nil {
 			return
 		}
+	}
+}
+
+func (handler *Handler) DeleteTransaction(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Methods", "DELETE")
+		d, err := db.NewTransactionsDB(logger)
+		if handler.handleErr(err, w) != nil {
+			return
+		}
+
+		id := r.URL.Query().Get("id")
+		if id == "" {
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+
+		i, err := strconv.Atoi(id)
+		if handler.handleErr(err, w) != nil {
+			return
+		}
+
+		err = d.DeleteByID(i)
+		handler.handleErr(err, w)
 	}
 }

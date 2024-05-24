@@ -9,11 +9,11 @@ import (
 )
 
 type Transaction struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	MessageID string `json:"messageID"`
-	Date      int64  `json:"date"`
-	Amount    string `json:"amount"`
+	Id        string  `json:"id"`
+	Name      string  `json:"name"`
+	MessageID string  `json:"messageID"`
+	Date      int64   `json:"date"`
+	Amount    float64 `json:"amount"`
 }
 
 type TransactionsDB struct {
@@ -28,7 +28,7 @@ func NewTransactionsDB(logger logger.Logger) (*TransactionsDB, error) {
 	}
 	_, err = db.Exec(
 		"CREATE TABLE IF NOT EXISTS transactions " +
-			"(id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date INTEGER, amount TEXT, owner TEXT)")
+			"(id INTEGER PRIMARY KEY, name TEXT, messageid TEXT UNIQUE, date INTEGER, amount REAL, owner TEXT)")
 	if err != nil {
 		return nil, err
 	}
@@ -79,4 +79,10 @@ func (t *TransactionsDB) SelectByMessageID(messageID string) (Transaction, error
 	err = row.Scan(&transaction.Name, &transaction.MessageID)
 
 	return transaction, err
+}
+
+func (t *TransactionsDB) DeleteByID(ID int) error {
+	_, err := t.db.Exec("delete FROM transactions where id = ?", ID)
+
+	return err
 }

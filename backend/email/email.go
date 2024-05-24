@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,10 +19,20 @@ import (
 
 type EmailService struct {
 	logger logger.Logger
+	srv    *gmail.Service
 }
 
-func NewEmailService(logger logger.Logger) EmailService {
-	return EmailService{logger}
+func NewEmailService(logger logger.Logger) (EmailService, error) {
+	ctx := context.Background()
+	client := auth.GetClient()
+
+	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
+	if err != nil {
+		logger.Error(fmt.Sprintf("Unable to retrieve Gmail client: %v", err))
+		return EmailService{}, err
+	}
+
+	return EmailService{logger, srv}, nil
 }
 
 func getValue(body string, key string) string {
@@ -46,16 +57,8 @@ func getValue(body string, key string) string {
 }
 
 func (e *EmailService) GetEmails() {
-	ctx := context.Background()
-	client := auth.GetClient()
-
-	srv, err := gmail.NewService(ctx, option.WithHTTPClient(client))
-	if err != nil {
-		e.logger.Error(fmt.Sprintf("Unable to retrieve Gmail client: %v", err))
-	}
-
 	user := "me"
-	r, err := srv.Users.Messages.List(user).Do()
+	r, err := e.srv.Users.Messages.List(user).Do()
 	if err != nil {
 		e.logger.Error(fmt.Sprintf("Unable to retrieve emails: %v", err))
 	}
@@ -66,9 +69,10 @@ func (e *EmailService) GetEmails() {
 	}
 
 	for _, m := range r.Messages {
-		msg, err := srv.Users.Messages.Get(user, m.Id).Do()
+		msg, err := e.srv.Users.Messages.Get(user, m.Id).Do()
 		if err != nil {
 			e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
+			continue
 		}
 
 		isDiscover := false
@@ -124,7 +128,12 @@ func (e *EmailService) GetEmails() {
 
 			amount := getValue(body, "Amount")
 			if amount != "" {
-				transaction.Amount = amount
+				a, err := strconv.ParseFloat(amount, 64)
+				if err != nil {
+					e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+				} else {
+					transaction.Amount = a
+				}
 			}
 
 		} else if len(msg.Payload.Parts) > 0 {
@@ -143,13 +152,21 @@ func (e *EmailService) GetEmails() {
 
 						amount := getValue(body, "Amount")
 						if amount != "" {
-							transaction.Amount = amount
+							a, err := strconv.ParseFloat(amount, 64)
+							if err != nil {
+								e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+							} else {
+								transaction.Amount = a
+							}
 						}
 					}
 				}
 			}
 		}
+		// todo not insert if amount = 0? Probably not a transaction alert
+		// or identify by subject?
 		err = d.Insert(transaction)
+
 		// we always process all emails and messageid UNIQUE constraint on DB level avoids duplicates
 		// so we don't log these errors to not clutter the logs, as these errors are expected
 		if err != nil && !strings.Contains(err.Error(), "UNIQUE constraint failed") {
