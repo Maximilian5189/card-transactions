@@ -4,6 +4,7 @@ import (
 	"backend/logger"
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -22,7 +23,9 @@ type TransactionsDB struct {
 }
 
 func NewTransactionsDB(logger logger.Logger) (*TransactionsDB, error) {
-	db, err := sql.Open("sqlite3", "database.db")
+	os.Mkdir("database", 0755)
+
+	db, err := sql.Open("sqlite3", "database/database.db")
 	if err != nil {
 		return nil, err
 	}

@@ -23,8 +23,8 @@ type Backup struct {
 }
 
 func New(logger logger.Logger) (Backup, error) {
-	accessKeyID := "4baf8cecf0035daea9f6254c896ef9a4"
-	secretAccessKey := "87042dac0e01e62a44dbd0b4e4398e3e4ded1a40245982791664f3b24f0cf597"
+	accessKeyID := os.Getenv("ACCESS_KEY_ID")
+	secretAccessKey := os.Getenv("SECRET_ACCESS_KEY")
 
 	sess, err := session.NewSession(&aws.Config{
 		Region:           aws.String("ENAM"),

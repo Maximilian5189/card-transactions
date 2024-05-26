@@ -76,13 +76,15 @@ func main() {
 		if err != nil {
 			logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
 		} else {
+			b.Upload(fmt.Sprintf("%s/database/database.db", dir))
+
 			ticker := time.NewTicker(24 * time.Hour)
 			quit := make(chan struct{})
 			go func() {
 				for {
 					select {
 					case <-ticker.C:
-						b.Upload(fmt.Sprintf("%s/database.db", dir))
+						b.Upload(fmt.Sprintf("%s/database/database.db", dir))
 					case <-quit:
 						ticker.Stop()
 						return
