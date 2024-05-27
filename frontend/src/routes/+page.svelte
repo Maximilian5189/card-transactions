@@ -4,7 +4,8 @@
 		getStartOfWeekTimestamp,
 		getTransactions,
 		postTransaction,
-		deleteTransaction
+		deleteTransaction,
+		type transaction
 	} from '$lib';
 	import { useSelector, PluginPosition } from 'gridjs';
 	import Grid from 'gridjs-svelte';
@@ -58,7 +59,7 @@
 		const t = { name, amount, date: d };
 		await postTransaction(t, token);
 
-		data = await getTransactions(0, token);
+		await calculate();
 
 		name = '';
 		amount = 0;
@@ -66,27 +67,43 @@
 
 	async function deleteTransactionHandler() {
 		await deleteTransaction(id, token);
-		data = await getTransactions(0, token);
+		await calculate();
 		id = '';
 	}
 
-	let totalLastWeek = 0;
-	let weekMinusTwo = 0;
-	let data: any[] = [];
+	async function calculate() {
+		let t = getStartOfWeekTimestamp();
+		data = await getTransactions(t, token);
+		for (let transaction of data) {
+			totalSpentCurrent += transaction.amount;
+		}
+
+		totalsPastWeeks = [];
+		totalSaved = 0;
+		for (let i = 0; i < pastWeeksToDisplay; i++) {
+			const offset = -1 - i;
+			const t = getStartOfWeekTimestamp(offset);
+			const totalPastWeek = await getTransactionsTotal(t, token);
+			totalsPastWeeks.push(totalPastWeek);
+
+			totalSaved -= totalPastWeek - 1000;
+		}
+		totalsPastWeeks = totalsPastWeeks;
+	}
+
+	let totalsPastWeeks: any[] = [];
+	let pastWeeksToDisplay = 2;
+	let data: transaction[] = [];
 	let name = '';
 	let amount = 0;
 	let id = '';
 	let date = '';
+	let totalSaved = 0;
+	let totalSpentCurrent = 0;
 	onMount(async () => {
 		token = $page.url.searchParams.get('t') || '';
 
-		data = await getTransactions(0, token);
-
-		let t = getStartOfWeekTimestamp(-1);
-		totalLastWeek = await getTransactionsTotal(t, token);
-
-		t = getStartOfWeekTimestamp(-2);
-		weekMinusTwo = await getTransactionsTotal(t, token);
+		await calculate();
 	});
 </script>
 
@@ -100,18 +117,25 @@
 <br /><br />
 <input type="text" bind:value={id} placeholder="id" />
 <button on:click={deleteTransactionHandler}>Delete transaction</button>
+<br /><br />
+<input type="number" bind:value={pastWeeksToDisplay} placeholder="past weeks to display" />
+<button on:click={calculate}>set past weeks</button>
 
-<div>total last week: {totalLastWeek}</div>
-<div>week before: {weekMinusTwo}</div>
+<br /><br />
 
-<Grid
-	{columns}
-	{data}
-	sort
-	search
-	pagination={{ enabled: true, limit: 100 }}
-	plugins={[sumPlugin]}
-/>
+<ul>
+	{#each totalsPastWeeks as total, index}
+		<li>
+			<div>t{-index - 1}: {total}</div>
+		</li>
+	{/each}
+</ul>
+
+<div>total saved: {totalSaved}</div>
+<br /><br />
+<div>total spent this week: {totalSpentCurrent}</div>
+
+<Grid {columns} {data} sort search pagination={{ enabled: true, limit: 100 }} />
 
 {JSON.stringify(data)}
 
