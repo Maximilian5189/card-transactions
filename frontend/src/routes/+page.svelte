@@ -74,9 +74,11 @@
 	async function calculate() {
 		let t = getStartOfWeekTimestamp();
 		data = await getTransactions(t, token);
+		totalSpentCurrent = 0;
 		for (let transaction of data) {
 			totalSpentCurrent += transaction.amount;
 		}
+		totalSpentCurrent = Math.round(totalSpentCurrent * 100) / 100;
 
 		totalsPastWeeks = [];
 		totalSaved = 0;
@@ -88,6 +90,8 @@
 
 			totalSaved -= totalPastWeek - 1000;
 		}
+		totalSaved = Math.round(totalSaved * 100) / 100;
+
 		totalsPastWeeks = totalsPastWeeks;
 	}
 
@@ -132,9 +136,9 @@
 </ul>
 
 <div>total saved: {totalSaved}</div>
-<br /><br />
+<br />
 <div>total spent this week: {totalSpentCurrent}</div>
-
+<div>budget: {1000 - totalSpentCurrent}</div>
 <Grid {columns} {data} sort search pagination={{ enabled: true, limit: 100 }} />
 
 {JSON.stringify(data)}
