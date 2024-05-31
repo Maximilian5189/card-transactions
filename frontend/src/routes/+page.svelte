@@ -5,7 +5,8 @@
 		getTransactions,
 		postTransaction,
 		deleteTransaction,
-		type transaction
+		type transaction,
+		getWeekNumber
 	} from '$lib';
 	import { useSelector, PluginPosition } from 'gridjs';
 	import Grid from 'gridjs-svelte';
@@ -95,8 +96,8 @@
 		totalsPastWeeks = totalsPastWeeks;
 	}
 
+	let pastWeeksToDisplay = 0;
 	let totalsPastWeeks: any[] = [];
-	let pastWeeksToDisplay = 2;
 	let data: transaction[] = [];
 	let name = '';
 	let amount = 0;
@@ -104,6 +105,13 @@
 	let date = '';
 	let totalSaved = 0;
 	let totalSpentCurrent = 0;
+
+	const currentWeek = getWeekNumber(new Date());
+	pastWeeksToDisplay = currentWeek - 19;
+	if (new Date().getFullYear() > 2024) {
+		pastWeeksToDisplay = currentWeek;
+	}
+
 	onMount(async () => {
 		token = $page.url.searchParams.get('t') || '';
 
@@ -135,10 +143,12 @@
 	{/each}
 </ul>
 
-<div>total saved: {totalSaved}</div>
+<div>
+	total saved: <span style={`color: ${totalSaved < 0 ? 'red' : 'green'}`}>{totalSaved}</span>
+</div>
 <br />
 <div>total spent this week: {totalSpentCurrent}</div>
-<div>budget: {1000 - totalSpentCurrent}</div>
+<div>budget: {Math.round((1000 - totalSpentCurrent) * 100) / 100}</div>
 <Grid {columns} {data} sort search pagination={{ enabled: true, limit: 100 }} />
 
 {JSON.stringify(data)}
