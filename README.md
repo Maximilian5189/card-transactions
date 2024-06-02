@@ -18,3 +18,7 @@ fly config env
 ```bash
 fly ssh console
 ```
+
+```bash
+/cmd -offset=<int>
+```

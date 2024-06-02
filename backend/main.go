@@ -68,32 +68,34 @@ func main() {
 		}()
 	}
 
-	dir, err := os.Getwd()
-	if err != nil {
-		logger.Error(fmt.Sprintf("Error getting current directory: %s", err))
-	} else {
-		b, err := backup.New(logger)
+	if strings.Contains(os.Getenv("ENV"), "prod") {
+		dir, err := os.Getwd()
 		if err != nil {
-			logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
+			logger.Error(fmt.Sprintf("Error getting current directory: %s", err))
 		} else {
-			b.Upload(fmt.Sprintf("%s/database/database.db", dir))
+			b, err := backup.New(logger)
+			if err != nil {
+				logger.Error(fmt.Sprintf("error instantiating backup: %s ", err))
+			} else {
+				b.Upload(fmt.Sprintf("%s/database/database.db", dir))
 
-			ticker := time.NewTicker(24 * time.Hour)
-			quit := make(chan struct{})
-			go func() {
-				for {
-					select {
-					case <-ticker.C:
-						b.Upload(fmt.Sprintf("%s/database/database.db", dir))
-					case <-quit:
-						ticker.Stop()
-						return
+				ticker := time.NewTicker(24 * time.Hour)
+				quit := make(chan struct{})
+				go func() {
+					for {
+						select {
+						case <-ticker.C:
+							b.Upload(fmt.Sprintf("%s/database/database.db", dir))
+						case <-quit:
+							ticker.Stop()
+							return
+						}
 					}
-				}
-			}()
-			// TODO as a separat script
-			// b.Download("/Users/ms/coding/card-transactions/backend/database.db")
+				}()
+			}
 		}
+	} else {
+		logger.Info("Not in production, will not create backup")
 	}
 
 	h := handler.NewHandler(logger)

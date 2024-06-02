@@ -65,18 +65,20 @@ func (b *Backup) Upload(filepath string) {
 	}
 }
 
-func (b *Backup) Download(filepath string) {
+func (b *Backup) Download(filepath string, offset int) {
 	downloader := s3manager.NewDownloader(b.sess)
 	file, err := os.Create(filepath)
 	if err != nil {
-		b.logger.Error(fmt.Sprintf("Failed to create file %q, %v", file.Name(), err))
+		b.logger.Error(fmt.Sprintf("Failed to create file %q, %v", filepath, err))
 		return
 	}
 
 	f := strings.Split(filepath, "/")
 	filename := f[len(f)-1]
-	t := time.Now()
+	t := time.Now().AddDate(0, 0, -1*offset)
 	key := t.Format("2006_01_02") + "_" + filename
+
+	b.logger.Info(fmt.Sprintf("Retrieving backup for %s", key))
 
 	_, err = downloader.Download(file,
 		&s3.GetObjectInput{
@@ -84,7 +86,7 @@ func (b *Backup) Download(filepath string) {
 			Key:    aws.String(key),
 		})
 	if err != nil {
-		b.logger.Error(fmt.Sprintf("Failed to download file, %v", err))
+		b.logger.Error(fmt.Sprintf("Failed to download file %s, %v", key, err))
 		return
 	}
 }

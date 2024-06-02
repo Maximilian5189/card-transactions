@@ -8,8 +8,14 @@ RUN go mod download
 
 COPY . .
 
-RUN GOOS=linux go build -o /main
+RUN GOOS=linux go build -o /app/main
+
+WORKDIR /app/cmd
+
+RUN GOOS=linux go build -o /cmd
 
 EXPOSE 8080
 
-CMD ["/main"]
+WORKDIR /app
+
+CMD ["/app/main"]
