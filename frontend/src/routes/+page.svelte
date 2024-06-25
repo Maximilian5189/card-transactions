@@ -75,25 +75,25 @@
 	async function calculate() {
 		let t = getStartOfWeekTimestamp();
 		data = await getTransactions(t, token);
-		totalSpentCurrent = 0;
+		let totalSpentCurrentLocal = 0;
 		for (let transaction of data) {
-			totalSpentCurrent += transaction.amount;
+			totalSpentCurrentLocal += transaction.amount;
 		}
-		totalSpentCurrent = Math.round(totalSpentCurrent * 100) / 100;
+		totalSpentCurrent = Math.round(totalSpentCurrentLocal * 100) / 100;
 
-		totalsPastWeeks = [];
-		totalSaved = 0;
+		let totalsPastWeeksLocal = [];
+		let totalSavedLocal = 0;
 		for (let i = 0; i < pastWeeksToDisplay; i++) {
 			const offset = -1 - i;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
-			totalsPastWeeks.push(totalPastWeek);
+			totalsPastWeeksLocal.push(totalPastWeek);
 
-			totalSaved -= totalPastWeek - 1000;
+			totalSavedLocal -= totalPastWeek - 1000;
 		}
-		totalSaved = Math.round(totalSaved * 100) / 100;
+		totalSaved = Math.round(totalSavedLocal * 100) / 100;
 
-		totalsPastWeeks = totalsPastWeeks;
+		totalsPastWeeks = totalsPastWeeksLocal;
 	}
 
 	let pastWeeksToDisplay = 0;
