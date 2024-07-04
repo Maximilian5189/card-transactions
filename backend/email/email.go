@@ -76,6 +76,7 @@ func (e *EmailService) GetEmails() {
 		}
 
 		isDiscover := false
+		isTransaction := false
 		dateError := false
 		from := ""
 		transaction := db.Transaction{}
@@ -105,12 +106,17 @@ func (e *EmailService) GetEmails() {
 			if h.Name == "Message-ID" {
 				transaction.MessageID = h.Value
 			}
+
+			if h.Name == "Subject" && strings.Contains(h.Value, "Transaction Alert") {
+				isTransaction = true
+			}
 		}
+
 		if dateError {
 			e.logger.Info("attention! Date error for email from " + from)
 		}
 
-		if !isDiscover {
+		if !isDiscover || !isTransaction {
 			continue
 		}
 
