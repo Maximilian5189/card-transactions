@@ -8,13 +8,10 @@
 		type transaction,
 		getWeekNumber
 	} from '$lib';
-	import { useSelector, PluginPosition } from 'gridjs';
 	import Grid from 'gridjs-svelte';
 	import 'gridjs/dist/theme/mermaid.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-
-	let token: string;
 
 	const columns = [
 		{ name: 'name', sort: false },
@@ -31,23 +28,6 @@
 			sort: true
 		}
 	];
-
-	const sumPlugin = {
-		id: 'salaryplugin',
-		component: function TotalSalaryPlugin() {
-			const data = useSelector((state) => state.data);
-
-			if (!data) return;
-
-			let total = 0;
-			for (const row of data.toArray()) {
-				total += Number(row[1]);
-			}
-
-			return `Total: ${Math.round(total * 100) / 100}`;
-		},
-		position: PluginPosition.Header
-	};
 
 	async function createNewTransactionHandler() {
 		let d;
@@ -73,7 +53,7 @@
 	}
 
 	async function calculate() {
-		let t = getStartOfWeekTimestamp();
+		let t = getStartOfWeekTimestamp(weeksOffset);
 		data = await getTransactions(t, token);
 		let totalSpentCurrentLocal = 0;
 		for (let transaction of data) {
@@ -83,8 +63,8 @@
 
 		let totalsPastWeeksLocal = [];
 		let totalSavedLocal = 0;
-		for (let i = 0; i < pastWeeksToDisplay; i++) {
-			const offset = -1 - i;
+		for (let i = 0; i < pastWeeksToDisplay + weeksOffset; i++) {
+			const offset = -1 - i + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
 			totalsPastWeeksLocal.push(totalPastWeek);
@@ -96,6 +76,18 @@
 		totalsPastWeeks = totalsPastWeeksLocal;
 	}
 
+	async function increaseWeekOffset() {
+		if (!weeksOffset) return;
+		weeksOffset += 1;
+		await calculate();
+	}
+
+	async function decreaseWeekOffset() {
+		weeksOffset -= 1;
+		await calculate();
+	}
+
+	let token: string;
 	let pastWeeksToDisplay = 0;
 	let totalsPastWeeks: any[] = [];
 	let data: transaction[] = [];
@@ -105,6 +97,7 @@
 	let date = '';
 	let totalSaved = 0;
 	let totalSpentCurrent = 0;
+	let weeksOffset = 0;
 
 	const currentWeek = getWeekNumber(new Date());
 	pastWeeksToDisplay = currentWeek - 19;
@@ -134,6 +127,15 @@
 <button on:click={calculate}>set past weeks</button>
 
 <br /><br />
+
+<button on:click={decreaseWeekOffset}>previous week</button>
+<br />
+<button on:click={increaseWeekOffset}>next week</button>
+
+<br />
+<div>week offset: {weeksOffset}</div>
+
+<br />
 
 <ul>
 	{#each totalsPastWeeks as total, index}
