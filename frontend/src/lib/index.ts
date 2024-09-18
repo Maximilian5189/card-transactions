@@ -44,7 +44,7 @@ export const getTransactionsTotal = async (timestamp: number, token: string) => 
 };
 
 export const postTransaction = async (transaction: transaction, token: string) => {
-	const randomNumber = Math.random() * 10000000;
+	const randomNumber = Math.round(Math.random() * 1000000000000);
 	transaction.messageID = randomNumber.toString();
 	const res = await fetch(`${server}/transaction?t=${token}`, {
 		method: 'POST',

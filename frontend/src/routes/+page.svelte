@@ -67,7 +67,10 @@
 			const offset = -1 - i + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
-			totalsPastWeeksLocal.push(totalPastWeek);
+
+			if (i < 10) {
+				totalsPastWeeksLocal.push(totalPastWeek);
+			}
 
 			totalSavedLocal -= totalPastWeek - 1000;
 		}
