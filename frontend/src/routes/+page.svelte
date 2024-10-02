@@ -63,16 +63,23 @@
 
 		let totalsPastWeeksLocal = [];
 		let totalSavedLocal = 0;
+		// weeksOffset is negative if looking from perspective of past week
 		for (let i = 0; i < pastWeeksToDisplay + weeksOffset; i++) {
 			const offset = -1 - i + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
 
-			if (i < 10) {
-				totalsPastWeeksLocal.push(totalPastWeek);
+			let budget = 1000;
+			// timestamp for the week since I have new budget
+			if (t >= 1725854400000) {
+				budget = currBudget;
 			}
 
-			totalSavedLocal -= totalPastWeek - 1000;
+			if (i < 10) {
+				totalsPastWeeksLocal.push([totalPastWeek, budget]);
+			}
+
+			totalSavedLocal -= totalPastWeek - budget;
 		}
 		totalSaved = Math.round(totalSavedLocal * 100) / 100;
 
@@ -101,6 +108,7 @@
 	let totalSaved = 0;
 	let totalSpentCurrent = 0;
 	let weeksOffset = 0;
+	const currBudget = 1000;
 
 	const currentWeek = getWeekNumber(new Date());
 	pastWeeksToDisplay = currentWeek - 19;
@@ -143,7 +151,7 @@
 <ul>
 	{#each totalsPastWeeks as total, index}
 		<li>
-			<div>t{-index - 1}: {total}</div>
+			<div>t{-index - 1}: {total[0]}, budget: {total[1]}</div>
 		</li>
 	{/each}
 </ul>
@@ -153,7 +161,7 @@
 </div>
 <br />
 <div>total spent this week: {totalSpentCurrent}</div>
-<div>budget: {Math.round((1000 - totalSpentCurrent) * 100) / 100}</div>
+<div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
 <Grid {columns} {data} sort search pagination={{ enabled: true, limit: 100 }} />
 
 {JSON.stringify(data)}
