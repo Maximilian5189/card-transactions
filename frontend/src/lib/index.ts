@@ -17,7 +17,7 @@ export function getStartOfWeekTimestamp(offset = 0) {
 	const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1) * 24 * 60 * 60 * 1000;
 
 	const startOfWeek = new Date(today.getTime() - diffToMonday);
-	startOfWeek.setDate(startOfWeek.getDate() + offset * 7);
+	startOfWeek.setDate(startOfWeek.getDate() - offset * 7);
 	startOfWeek.setHours(0, 0, 0, 0);
 
 	return startOfWeek.getTime();

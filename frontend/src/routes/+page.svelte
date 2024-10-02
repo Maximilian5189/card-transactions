@@ -64,8 +64,8 @@
 		let totalsPastWeeksLocal = [];
 		let totalSavedLocal = 0;
 		// weeksOffset is negative if looking from perspective of past week
-		for (let i = 0; i < pastWeeksToDisplay + weeksOffset; i++) {
-			const offset = -1 - i + weeksOffset;
+		for (let i = 0; i < 10; i++) {
+			const offset = i + 1 + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
 
@@ -75,9 +75,7 @@
 				budget = currBudget;
 			}
 
-			if (i < 10) {
-				totalsPastWeeksLocal.push([totalPastWeek, budget]);
-			}
+			totalsPastWeeksLocal.push([totalPastWeek, budget]);
 
 			totalSavedLocal -= totalPastWeek - budget;
 		}
@@ -86,14 +84,14 @@
 		totalsPastWeeks = totalsPastWeeksLocal;
 	}
 
-	async function increaseWeekOffset() {
+	async function decreaseWeekOffset() {
 		if (!weeksOffset) return;
-		weeksOffset += 1;
+		weeksOffset -= 1;
 		await calculate();
 	}
 
-	async function decreaseWeekOffset() {
-		weeksOffset -= 1;
+	async function increaseWeekOffset() {
+		weeksOffset += 1;
 		await calculate();
 	}
 
@@ -139,9 +137,9 @@
 
 <br /><br />
 
-<button on:click={decreaseWeekOffset}>previous week</button>
+<button on:click={increaseWeekOffset}>previous week</button>
 <br />
-<button on:click={increaseWeekOffset}>next week</button>
+<button on:click={decreaseWeekOffset}>next week</button>
 
 <br />
 <div>week offset: {weeksOffset}</div>
