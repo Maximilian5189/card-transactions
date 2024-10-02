@@ -63,7 +63,6 @@
 
 		let totalsPastWeeksLocal = [];
 		let totalSavedLocal = 0;
-		// weeksOffset is negative if looking from perspective of past week
 		for (let i = 0; i < 10; i++) {
 			const offset = i + 1 + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
