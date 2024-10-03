@@ -70,9 +70,11 @@
 
 			let budget = 1000;
 			// timestamp for the week since I have new budget
-			if (t >= 1725854400000) {
+			if (t >= 19975 * 24 * 60 * 60 * 1000) {
 				budget = currBudget;
 			}
+			// comment in to find current day for a new if condition
+			// console.log(t / 24 / 60 / 60 / 1000);
 
 			totalsPastWeeksLocal.push([totalPastWeek, budget]);
 
