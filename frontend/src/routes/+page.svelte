@@ -63,7 +63,7 @@
 
 		let totalsPastWeeksLocal = [];
 		let totalSavedLocal = 0;
-		for (let i = 0; i < 10; i++) {
+		for (let i = 0; i < pastWeeksToDisplay - weeksOffset; i++) {
 			const offset = i + 1 + weeksOffset;
 			const t = getStartOfWeekTimestamp(offset);
 			const totalPastWeek = await getTransactionsTotal(t, token);
@@ -76,7 +76,9 @@
 			// comment in to find current day for a new if condition
 			// console.log(t / 24 / 60 / 60 / 1000);
 
-			totalsPastWeeksLocal.push([totalPastWeek, budget]);
+			if (i < 10) {
+				totalsPastWeeksLocal.push([totalPastWeek, budget]);
+			}
 
 			totalSavedLocal -= totalPastWeek - budget;
 		}
@@ -86,7 +88,6 @@
 	}
 
 	async function decreaseWeekOffset() {
-		if (!weeksOffset) return;
 		weeksOffset -= 1;
 		await calculate();
 	}
