@@ -53,7 +53,7 @@ func (handler *Handler) GetTransactions(logger logger.Logger) func(http.Response
 		}
 
 		to := from.AddDate(0, 0, 6)
-		to = time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 0, to.Location())
+		to = time.Date(to.Year(), to.Month(), to.Day(), 24, 0, 0, 0, to.Location())
 		transactions, err := d.Select(from.Unix(), to.Unix())
 		if handler.handleErr(err, w) != nil {
 			return
