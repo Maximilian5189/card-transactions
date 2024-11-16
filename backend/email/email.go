@@ -38,17 +38,17 @@ func NewEmailService(logger logger.Logger) (EmailService, error) {
 func getValue(body string, key string) string {
 	lines := strings.Split(body, "\n")
 
-	var merchantLine string
-	for _, line := range lines {
-		if strings.HasPrefix(line, fmt.Sprintf("%s:", key)) {
-			merchantLine = line
+	var line string
+	for _, l := range lines {
+		if strings.HasPrefix(l, key) {
+			line = l
 			break
 		}
 	}
 
-	regex := fmt.Sprintf("%s:", key) + `\s*(.*)`
+	regex := key + `\s*(.*)`
 	re := regexp.MustCompile(regex)
-	match := re.FindStringSubmatch(merchantLine)
+	match := re.FindStringSubmatch(line)
 	if len(match) > 1 {
 		sanitized := strings.ReplaceAll(match[1], "\r", "")
 		return strings.ReplaceAll(sanitized, "$", "")
@@ -76,6 +76,7 @@ func (e *EmailService) GetEmails() {
 		}
 
 		isDiscover := false
+		isFidelity := false
 		isTransaction := false
 		dateError := false
 		from := ""
@@ -100,6 +101,8 @@ func (e *EmailService) GetEmails() {
 				from = h.Value
 				if strings.Contains(h.Value, "Discover") {
 					isDiscover = true
+				} else if strings.Contains(h.Value, "fidelity") {
+					isFidelity = true
 				}
 			}
 
@@ -107,7 +110,9 @@ func (e *EmailService) GetEmails() {
 				transaction.MessageID = h.Value
 			}
 
-			if h.Name == "Subject" && strings.Contains(h.Value, "Transaction Alert") {
+			if h.Name == "Subject" &&
+				(strings.Contains(h.Value, "Transaction Alert") || strings.Contains(h.Value, "Transaction Notification") ||
+					strings.Contains(h.Value, "A charge was authorized")) {
 				isTransaction = true
 			}
 		}
@@ -116,61 +121,122 @@ func (e *EmailService) GetEmails() {
 			e.logger.Info("attention! Date error for email from " + from)
 		}
 
-		if !isDiscover || !isTransaction {
+		if (!isDiscover && !isFidelity) || !isTransaction {
 			continue
 		}
 
+		// TODO I think this is never called
 		if msg.Payload.Body.Data != "" {
-			bodyBytes, err := base64.StdEncoding.DecodeString(msg.Payload.Body.Data)
-			if err != nil {
-				e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
-			}
-
-			body := string(bodyBytes)
-			name := getValue(body, "Merchant")
-			if name != "" {
-				transaction.Name = name
-			}
-
-			amount := getValue(body, "Amount")
-			if amount != "" {
-				a, err := strconv.ParseFloat(amount, 64)
+			fmt.Println("------------>")
+			if isDiscover {
+				bodyBytes, err := base64.StdEncoding.DecodeString(msg.Payload.Body.Data)
 				if err != nil {
-					e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
-				} else {
-					transaction.Amount = a
+					e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
+				}
+
+				body := string(bodyBytes)
+				name := getValue(body, "Merchant:")
+				if name != "" {
+					transaction.Name = name
+				}
+
+				amount := getValue(body, "Amount:")
+				if amount != "" {
+					a, err := strconv.ParseFloat(amount, 64)
+					if err != nil {
+						e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+					} else {
+						transaction.Amount = a
+					}
 				}
 			}
-
 		} else if len(msg.Payload.Parts) > 0 {
 			for _, part := range msg.Payload.Parts {
-				if part.MimeType == "text/plain" || part.MimeType == "text/html" {
+				if part.MimeType == "text/plain" {
 					if part.Body.Data != "" {
-						bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
-						if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
-							e.logger.Error(fmt.Sprintf("error getting content: %v", err))
-						}
-						body := string(bodyBytes)
-						name := getValue(body, "Merchant")
-						if name != "" {
-							transaction.Name = name
-						}
+						if isDiscover {
+							bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
+							if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
+								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
+							}
+							body := string(bodyBytes)
+							name := getValue(body, "Merchant:")
+							if name != "" {
+								transaction.Name = name
+							}
 
-						amount := getValue(body, "Amount")
-						if amount != "" {
-							a, err := strconv.ParseFloat(amount, 64)
-							if err != nil {
-								e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
-							} else {
-								transaction.Amount = a
+							amount := getValue(body, "Amount:")
+							if amount != "" {
+								a, err := strconv.ParseFloat(amount, 64)
+								if err != nil {
+									e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+								} else {
+									transaction.Amount = a
+								}
+							}
+						}
+					}
+				} else if part.MimeType == "text/html" {
+					if isFidelity {
+						data := part.Body.Data
+						data = strings.ReplaceAll(data, "-", "+")
+						data = strings.ReplaceAll(data, "_", "/")
+
+						// TODO handle error?
+						bodyBytes, _ := base64.StdEncoding.DecodeString(data)
+						body := string(bodyBytes)
+
+						lines := strings.Split(body, "\n")
+
+						for _, l := range lines {
+							var amountRegex *regexp.Regexp
+							processLine := false
+							if strings.Contains(l, "Your account was charged") {
+								amountRegex = regexp.MustCompile(`Your account was charged \$(\d+\.\d+)`)
+								processLine = true
+							} else if strings.Contains(l, "Your card was charged") {
+								amountRegex = regexp.MustCompile(`Your card was charged \$(\d+\.\d+)`)
+								processLine = true
+							}
+
+							if processLine {
+								amountMatch := amountRegex.FindStringSubmatch(l)
+								if len(amountMatch) > 1 {
+									amount := strings.Replace(amountMatch[1], "$", "", -1)
+									a, err := strconv.ParseFloat(amount, 64)
+									if err != nil {
+										e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+									} else {
+										transaction.Amount = a
+									}
+								}
+
+								merchantRegex := regexp.MustCompile(`at\s+(.+?)\.?\s*$`)
+								merchantMatch := merchantRegex.FindStringSubmatch(l)
+								if len(merchantMatch) > 1 {
+									parts := strings.Split(merchantMatch[1], " ")
+
+									for _, part := range parts {
+										if part == "To" {
+											break
+										}
+										part = strings.TrimSuffix(part, ".</h1>")
+										transaction.Name += part + " "
+									}
+								}
+								break
 							}
 						}
 					}
 				}
 			}
 		}
-		// todo not insert if amount = 0? Probably not a transaction alert
-		// or identify by subject?
+
+		if strings.Contains(transaction.Name, "BEATPORT") ||
+			strings.Contains(transaction.Name, "Crooked.com") ||
+			strings.Contains(transaction.Name, "Peacock TV") {
+			transaction.Amount = 0
+		}
 		err = d.Insert(transaction)
 
 		// we always process all emails and messageid UNIQUE constraint on DB level avoids duplicates
