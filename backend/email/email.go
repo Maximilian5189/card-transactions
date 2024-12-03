@@ -233,8 +233,8 @@ func (e *EmailService) GetEmails() {
 		}
 
 		if strings.Contains(transaction.Name, "BEATPORT") ||
-			strings.Contains(transaction.Name, "Crooked.com") ||
-			strings.Contains(transaction.Name, "Peacock TV") {
+			strings.Contains(transaction.Name, "Crooked") ||
+			strings.Contains(transaction.Name, "Peacock") {
 			transaction.Amount = 0
 		}
 		err = d.Insert(transaction)
