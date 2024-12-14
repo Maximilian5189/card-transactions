@@ -8,26 +8,72 @@
 		type transaction,
 		getWeekNumber
 	} from '$lib';
-	import Grid from 'gridjs-svelte';
-	import 'gridjs/dist/theme/mermaid.css';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
-	const columns = [
-		{ name: 'name', sort: false },
-		{ name: 'amount', sort: false },
-		{
-			name: 'date',
-			formatter: (cell: number) => {
-				return new Date(cell * 1000).toLocaleDateString('en-us', {
-					year: 'numeric',
-					month: 'short',
-					day: 'numeric'
-				});
-			},
-			sort: true
+	// Table state
+	let searchQuery = '';
+	let sortColumn = 'date';
+	let sortDirection: 'asc' | 'desc' = 'desc';
+	let showDeleteModal = false;
+	let transactionToDelete: { id: string; name: string } | null = null;
+
+	function isValidTransactionId(id: string | undefined): boolean {
+		return !isNaN(Number(id)) && id?.trim() !== '';
+	}
+
+	function formatDate(timestamp: number) {
+		return new Date(timestamp * 1000).toLocaleDateString('en-us', {
+			year: 'numeric',
+			month: 'short',
+			day: 'numeric'
+		});
+	}
+
+	let token: string;
+	let pastWeeksToDisplay = 0;
+	let totalsPastWeeks: any[] = [];
+	let data: transaction[] = [];
+	let name = '';
+	let amount = 0;
+	let id = '';
+	let date = '';
+	let totalSaved = 0;
+	let totalSpentCurrent = 0;
+	let weeksOffset = 0;
+	const currBudget = 1000;
+
+	const currentWeek = getWeekNumber(new Date());
+	pastWeeksToDisplay = currentWeek - 19;
+	if (new Date().getFullYear() > 2024) {
+		pastWeeksToDisplay = currentWeek;
+	}
+
+	$: filteredData = data
+		.filter((item) =>
+			Object.values(item).some((val) =>
+				String(val).toLowerCase().includes(searchQuery.toLowerCase())
+			)
+		)
+		.sort((a, b) => {
+			const aVal = sortColumn === 'date' ? a[sortColumn] : String(a[sortColumn]).toLowerCase();
+			const bVal = sortColumn === 'date' ? b[sortColumn] : String(b[sortColumn]).toLowerCase();
+
+			if (sortDirection === 'asc') {
+				return aVal > bVal ? 1 : -1;
+			}
+			return aVal < bVal ? 1 : -1;
+		});
+
+	function handleSort(column: string) {
+		if (sortColumn === column) {
+			sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+		} else {
+			sortColumn = column;
+			sortDirection = 'asc';
 		}
-	];
+	}
 
 	async function createNewTransactionHandler() {
 		let d;
@@ -46,10 +92,20 @@
 		amount = 0;
 	}
 
-	async function deleteTransactionHandler() {
-		await deleteTransaction(id, token);
+	async function deleteTransactionHandler(transactionId: string) {
+		await deleteTransaction(transactionId, token);
 		await calculate();
-		id = '';
+		closeDeleteModal();
+	}
+
+	function openDeleteModal(transaction: { id: string; name: string }) {
+		transactionToDelete = transaction;
+		showDeleteModal = true;
+	}
+
+	function closeDeleteModal() {
+		showDeleteModal = false;
+		transactionToDelete = null;
 	}
 
 	async function calculate() {
@@ -97,25 +153,6 @@
 		await calculate();
 	}
 
-	let token: string;
-	let pastWeeksToDisplay = 0;
-	let totalsPastWeeks: any[] = [];
-	let data: transaction[] = [];
-	let name = '';
-	let amount = 0;
-	let id = '';
-	let date = '';
-	let totalSaved = 0;
-	let totalSpentCurrent = 0;
-	let weeksOffset = 0;
-	const currBudget = 1000;
-
-	const currentWeek = getWeekNumber(new Date());
-	pastWeeksToDisplay = currentWeek - 19;
-	if (new Date().getFullYear() > 2024) {
-		pastWeeksToDisplay = currentWeek;
-	}
-
 	onMount(async () => {
 		token = $page.url.searchParams.get('t') || '';
 
@@ -125,25 +162,25 @@
 
 <h1>Welcome to Jochen</h1>
 
-<input type="text" bind:value={name} placeholder="name" />
-<input type="number" bind:value={amount} placeholder="amount" />
-<input type="date" bind:value={date} />
+<button class="nav-btn" on:click={() => goto(`/old?${$page.url.searchParams.toString()}`)}>Switch to Old View</button>
 
-<button on:click={createNewTransactionHandler}>Create new transaction</button>
-<br /><br />
-<input type="text" bind:value={id} placeholder="id" />
-<button on:click={deleteTransactionHandler}>Delete transaction</button>
-<br /><br />
-<input type="number" bind:value={pastWeeksToDisplay} placeholder="past weeks to display" />
-<button on:click={calculate}>set past weeks</button>
+<div class="form-group">
+	<input type="text" class="input-field" bind:value={name} placeholder="name" />
+	<input type="number" class="input-field" bind:value={amount} placeholder="amount" />
+	<input type="date" class="input-field" bind:value={date} />
+	<button class="primary-btn" on:click={createNewTransactionHandler}>Create new transaction</button>
+</div>
 
-<br /><br />
+<div class="form-group">
+	<input type="number" class="input-field" bind:value={pastWeeksToDisplay} placeholder="past weeks to display" />
+	<button class="primary-btn" on:click={calculate}>Set past weeks</button>
+</div>
 
-<button on:click={increaseWeekOffset}>previous week</button>
-<br />
-<button on:click={decreaseWeekOffset}>next week</button>
+<div class="form-group">
+	<button class="secondary-btn" on:click={increaseWeekOffset}>Previous week</button>
+	<button class="secondary-btn" on:click={decreaseWeekOffset}>Next week</button>
+</div>
 
-<br />
 <div>week offset: {weeksOffset}</div>
 
 <br />
@@ -157,15 +194,358 @@
 </ul>
 
 <div>
-	total saved: <span style={`color: ${totalSaved < 0 ? 'red' : 'green'}`}>{totalSaved}</span>
+	total saved: <span style={`color: ${totalSaved < 0 ? 'var(--error-color)' : 'var(--success-color)'}`}>{totalSaved}</span>
 </div>
 <br />
 <div>total spent this week: {totalSpentCurrent}</div>
 <div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
-<Grid {columns} {data} sort search pagination={{ enabled: true, limit: 100 }} />
+
+<div class="search-container">
+	<input type="text" class="input-field" bind:value={searchQuery} placeholder="Search..." />
+</div>
+
+<div class="table-container">
+	<table>
+		<thead>
+			<tr>
+				<th on:click={() => handleSort('name')}>
+					Name
+					{#if sortColumn === 'name'}
+						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+					{/if}
+				</th>
+				<th on:click={() => handleSort('amount')}>
+					Amount
+					{#if sortColumn === 'amount'}
+						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+					{/if}
+				</th>
+				<th on:click={() => handleSort('date')}>
+					Date
+					{#if sortColumn === 'date'}
+						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+					{/if}
+				</th>
+				<th>Actions</th>
+			</tr>
+		</thead>
+		<tbody>
+			{#each filteredData as row}
+				<tr>
+					<td>{row.name}</td>
+					<td>{row.amount}</td>
+					<td>{formatDate(row.date)}</td>
+					<td>
+						{#if isValidTransactionId(row.messageID)}
+							<button
+								class="delete-btn"
+								on:click={() => openDeleteModal({ id: row.id, name: row.name })}
+								title="Delete transaction"
+							>
+								Delete
+							</button>
+						{/if}
+					</td>
+				</tr>
+			{/each}
+		</tbody>
+	</table>
+</div>
+
+{#if showDeleteModal && transactionToDelete}
+	<div class="modal-backdrop" on:click={closeDeleteModal}>
+		<div class="modal" on:click|stopPropagation>
+			<h2>Confirm Delete</h2>
+			<p>Are you sure you want to delete the transaction "{transactionToDelete.name}"?</p>
+			<div class="modal-actions">
+				<button class="cancel-btn" on:click={closeDeleteModal}>Cancel</button>
+				<button
+					class="delete-btn"
+					on:click={() => deleteTransactionHandler(transactionToDelete.id)}
+				>
+					Delete
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
 
 {JSON.stringify(data)}
 
-<style global>
-	@import 'https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css';
+<style>
+	:root {
+		--primary-color: #3b82f6;
+		--primary-hover: #2563eb;
+		--secondary-color: #6b7280;
+		--secondary-hover: #4b5563;
+		--error-color: #ef4444;
+		--error-hover: #dc2626;
+		--success-color: #22c55e;
+		--border-color: #e2e8f0;
+		--background-color: white;
+		--text-color: #374151;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--primary-color: #2563eb;
+			--primary-hover: #1d4ed8;
+			--secondary-color: #4b5563;
+			--secondary-hover: #374151;
+			--error-color: #dc2626;
+			--error-hover: #b91c1c;
+			--success-color: #16a34a;
+			--border-color: #374151;
+			--background-color: #1a1a1a;
+			--text-color: #e5e7eb;
+		}
+	}
+
+	.form-group {
+		display: flex;
+		gap: 1rem;
+		margin-bottom: 1rem;
+		flex-wrap: wrap;
+		align-items: center;
+	}
+
+	.input-field {
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--border-color);
+		border-radius: 0.25rem;
+		font-size: 0.875rem;
+		background-color: var(--background-color);
+		color: var(--text-color);
+		min-width: 150px;
+	}
+
+	.input-field:focus {
+		outline: none;
+		border-color: var(--primary-color);
+		box-shadow: 0 0 0 1px var(--primary-color);
+	}
+
+	.primary-btn, .nav-btn {
+		background-color: var(--primary-color);
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		transition: background-color 0.2s;
+	}
+
+	.primary-btn:hover, .nav-btn:hover {
+		background-color: var(--primary-hover);
+	}
+
+	.secondary-btn {
+		background-color: var(--secondary-color);
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		transition: background-color 0.2s;
+	}
+
+	.secondary-btn:hover {
+		background-color: var(--secondary-hover);
+	}
+
+	.delete-btn {
+		background-color: var(--error-color);
+		color: white;
+		border: none;
+		padding: 0.25rem 0.75rem;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		transition: background-color 0.2s;
+	}
+
+	.delete-btn:hover {
+		background-color: var(--error-hover);
+	}
+
+	.table-container {
+		margin: 1rem 0;
+		border: 1px solid var(--border-color);
+		border-radius: 0.5rem;
+		overflow: hidden;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		:global(body) {
+			background-color: #1a1a1a;
+			color: #e5e7eb;
+		}
+
+		.table-container {
+			border-color: #374151;
+		}
+
+		input[type="text"],
+		input[type="number"],
+		input[type="date"] {
+			background-color: #2d2d2d;
+			border: 1px solid #4b5563;
+			color: #e5e7eb;
+		}
+
+		input::placeholder {
+			color: #9ca3af;
+		}
+
+		.search-input {
+			background-color: #2d2d2d;
+			border-color: #4b5563;
+			color: #e5e7eb;
+		}
+	}
+
+	.search-container {
+		margin-bottom: 1rem;
+	}
+
+	.search-input {
+		padding: 0.5rem;
+		border: 1px solid var(--border-color);
+		border-radius: 0.25rem;
+		width: 100%;
+		max-width: 300px;
+	}
+
+	table {
+		width: 100%;
+		border-collapse: collapse;
+		background-color: var(--background-color);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		table {
+			background-color: #2d2d2d;
+		}
+
+		th {
+			background-color: #1f2937;
+		}
+
+		th:hover {
+			background-color: #374151;
+		}
+
+		td {
+			border-color: #374151;
+		}
+
+		tr:hover {
+			background-color: #374151;
+		}
+	}
+
+	th,
+	td {
+		padding: 0.75rem;
+		text-align: left;
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	th {
+		background-color: #f8fafc;
+		font-weight: 600;
+		cursor: pointer;
+	}
+
+	th:hover {
+		background-color: #f1f5f9;
+	}
+
+	.sort-indicator {
+		display: inline-block;
+		margin-left: 0.5rem;
+	}
+
+	.modal-backdrop {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.modal {
+			background-color: #2d2d2d;
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+		}
+
+		.modal p {
+			color: #9ca3af;
+		}
+
+		.cancel-btn {
+			background-color: #4b5563;
+			color: #e5e7eb;
+		}
+
+		.cancel-btn:hover {
+			background-color: #6b7280;
+		}
+
+		.nav-btn {
+			background-color: #2563eb;
+		}
+
+		.nav-btn:hover {
+			background-color: #1d4ed8;
+		}
+	}
+
+	.modal {
+		background-color: white;
+		padding: 1.5rem;
+		border-radius: 0.5rem;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+		max-width: 400px;
+		width: 90%;
+	}
+
+	.modal h2 {
+		margin: 0 0 1rem 0;
+		font-size: 1.25rem;
+	}
+
+	.modal p {
+		margin: 0 0 1.5rem 0;
+		color: #4b5563;
+	}
+
+	.modal-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 0.75rem;
+	}
+
+	.cancel-btn {
+		background-color: var(--secondary-color);
+		color: white;
+		border: none;
+		padding: 0.5rem 1rem;
+		border-radius: 0.25rem;
+		cursor: pointer;
+		font-size: 0.875rem;
+		transition: background-color 0.2s;
+	}
+
+	.cancel-btn:hover {
+		background-color: var(--secondary-hover);
+	}
 </style>
