@@ -233,7 +233,7 @@ func (e *EmailService) GetEmails() {
 		}
 
 		if strings.Contains(transaction.Name, "BEATPORT") ||
-			strings.Contains(transaction.Name, "Crooked") ||
+			strings.Contains(transaction.Name, "CROOKED") ||
 			strings.Contains(transaction.Name, "Peacock") {
 			transaction.Amount = 0
 		}
