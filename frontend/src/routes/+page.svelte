@@ -424,17 +424,21 @@
 		background-color: var(--background-color);
 	}
 
+	th {
+		background-color: var(--secondary-color);
+		color: white;
+		font-weight: 600;
+		cursor: pointer;
+		transition: background-color 0.2s;
+	}
+
+	th:hover {
+		background-color: var(--secondary-hover);
+	}
+
 	@media (prefers-color-scheme: dark) {
 		table {
 			background-color: #2d2d2d;
-		}
-
-		th {
-			background-color: #1f2937;
-		}
-
-		th:hover {
-			background-color: #374151;
 		}
 
 		td {
@@ -451,16 +455,6 @@
 		padding: 0.75rem;
 		text-align: left;
 		border-bottom: 1px solid var(--border-color);
-	}
-
-	th {
-		background-color: #f8fafc;
-		font-weight: 600;
-		cursor: pointer;
-	}
-
-	th:hover {
-		background-color: #f1f5f9;
 	}
 
 	.sort-indicator {
@@ -481,36 +475,9 @@
 		z-index: 1000;
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.modal {
-			background-color: #2d2d2d;
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-		}
-
-		.modal p {
-			color: #9ca3af;
-		}
-
-		.cancel-btn {
-			background-color: #4b5563;
-			color: #e5e7eb;
-		}
-
-		.cancel-btn:hover {
-			background-color: #6b7280;
-		}
-
-		.nav-btn {
-			background-color: #2563eb;
-		}
-
-		.nav-btn:hover {
-			background-color: #1d4ed8;
-		}
-	}
-
 	.modal {
-		background-color: white;
+		background-color: var(--background-color);
+		color: var(--text-color);
 		padding: 1.5rem;
 		border-radius: 0.5rem;
 		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
@@ -521,17 +488,29 @@
 	.modal h2 {
 		margin: 0 0 1rem 0;
 		font-size: 1.25rem;
+		color: var(--text-color);
 	}
 
 	.modal p {
 		margin: 0 0 1.5rem 0;
-		color: #4b5563;
+		color: var(--text-color);
+		opacity: 0.8;
 	}
 
 	.modal-actions {
 		display: flex;
 		justify-content: flex-end;
 		gap: 0.75rem;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.modal {
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+		}
+
+		.modal-backdrop {
+			background-color: rgba(0, 0, 0, 0.7);
+		}
 	}
 
 	.cancel-btn {
