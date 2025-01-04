@@ -45,10 +45,7 @@
 	const currBudget = 1000;
 
 	const currentWeek = getWeekNumber(new Date());
-	pastWeeksToDisplay = currentWeek - 19;
-	if (new Date().getFullYear() > 2024) {
-		pastWeeksToDisplay = currentWeek;
-	}
+	pastWeeksToDisplay = currentWeek - 1;
 
 	$: filteredData = data
 		.filter((item) =>
@@ -145,11 +142,21 @@
 
 	async function decreaseWeekOffset() {
 		weeksOffset -= 1;
+		if (weeksOffset === 0) {
+			pastWeeksToDisplay = currentWeek - 1;
+		}
 		await calculate();
 	}
 
 	async function increaseWeekOffset() {
 		weeksOffset += 1;
+		if (pastWeeksToDisplay === 0) {
+			if (new Date().getFullYear() > 2025) {
+				pastWeeksToDisplay = 52;
+			} else {
+				pastWeeksToDisplay = 52 - 19 + 1;
+			}
+		}
 		await calculate();
 	}
 
@@ -162,7 +169,9 @@
 
 <h1>Welcome to Jochen</h1>
 
-<button class="nav-btn" on:click={() => goto(`/old?${$page.url.searchParams.toString()}`)}>Switch to Old View</button>
+<button class="nav-btn" on:click={() => goto(`/old?${$page.url.searchParams.toString()}`)}
+	>Switch to Old View</button
+>
 
 <div class="form-group">
 	<input type="text" class="input-field" bind:value={name} placeholder="name" />
@@ -172,7 +181,12 @@
 </div>
 
 <div class="form-group">
-	<input type="number" class="input-field" bind:value={pastWeeksToDisplay} placeholder="past weeks to display" />
+	<input
+		type="number"
+		class="input-field"
+		bind:value={pastWeeksToDisplay}
+		placeholder="past weeks to display"
+	/>
 	<button class="primary-btn" on:click={calculate}>Set past weeks</button>
 </div>
 
@@ -194,7 +208,10 @@
 </ul>
 
 <div>
-	total saved: <span style={`color: ${totalSaved < 0 ? 'var(--error-color)' : 'var(--success-color)'}`}>{totalSaved}</span>
+	total saved: <span
+		style={`color: ${totalSaved < 0 ? 'var(--error-color)' : 'var(--success-color)'}`}
+		>{totalSaved}</span
+	>
 </div>
 <br />
 <div>total spent this week: {totalSpentCurrent}</div>
@@ -325,7 +342,8 @@
 		box-shadow: 0 0 0 1px var(--primary-color);
 	}
 
-	.primary-btn, .nav-btn {
+	.primary-btn,
+	.nav-btn {
 		background-color: var(--primary-color);
 		color: white;
 		border: none;
@@ -336,7 +354,8 @@
 		transition: background-color 0.2s;
 	}
 
-	.primary-btn:hover, .nav-btn:hover {
+	.primary-btn:hover,
+	.nav-btn:hover {
 		background-color: var(--primary-hover);
 	}
 
@@ -387,9 +406,9 @@
 			border-color: #374151;
 		}
 
-		input[type="text"],
-		input[type="number"],
-		input[type="date"] {
+		input[type='text'],
+		input[type='number'],
+		input[type='date'] {
 			background-color: #2d2d2d;
 			border: 1px solid #4b5563;
 			color: #e5e7eb;
