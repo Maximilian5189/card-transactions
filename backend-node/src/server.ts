@@ -12,7 +12,7 @@ const authMiddleware = (
   req: express.Request,
   res: express.Response,
   next: express.NextFunction
-) => {
+): any => {
   const token = req.query.t as string;
   console.log(process.env.TOKEN);
   if (!token || token !== process.env.TOKEN) {
@@ -21,10 +21,10 @@ const authMiddleware = (
   next();
 };
 
-app.get("/fetch-website", authMiddleware, async (req, res) => {
+app.get("/fetch-website", authMiddleware, async (req, res): Promise<void> => {
   const url = req.query.url as string;
   if (!url) {
-    return res.status(400).json({ error: "URL parameter is required" });
+    res.status(400).json({ error: "URL parameter is required" });
   }
 
   try {
