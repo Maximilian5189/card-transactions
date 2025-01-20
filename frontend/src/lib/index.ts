@@ -8,9 +8,7 @@ export type transaction = {
 	messageID?: string;
 };
 export const server = isDev ? 'http://localhost:8080' : 'https://card-transactions-backend.fly.dev';
-export const nodeServer = isDev
-	? 'http://localhost:3000'
-	: 'https://card-transactions-backend.fly.dev'; // TODO
+export const nodeServer = isDev ? 'http://localhost:3000' : 'https://backend-node.fly.dev';
 
 export function getStartOfWeekTimestamp(offset = 0) {
 	const today = new Date();
