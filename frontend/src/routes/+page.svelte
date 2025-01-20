@@ -6,7 +6,8 @@
 		postTransaction,
 		deleteTransaction,
 		type transaction,
-		getWeekNumber
+		getWeekNumber,
+		fetchAndPrintHTML
 	} from '$lib';
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
@@ -42,6 +43,8 @@
 	let totalSaved = 0;
 	let totalSpentCurrent = 0;
 	let weeksOffset = 0;
+	let bigSnowPricing = '';
+	let isLoadingPricing = false;
 	const currBudget = 1000;
 
 	const currentWeek = getWeekNumber(new Date());
@@ -164,6 +167,18 @@
 		token = $page.url.searchParams.get('t') || '';
 
 		await calculate();
+
+		try {
+			isLoadingPricing = true;
+			bigSnowPricing = await fetchAndPrintHTML(
+				'https://bigsnowad.snowcloud.shop/shop/page/1E7B1BEE-0982-4F86-0F80-FC2A96F03E19',
+				token
+			);
+		} catch (error) {
+			bigSnowPricing = 'le error';
+		} finally {
+			isLoadingPricing = false;
+		}
 	});
 </script>
 
@@ -216,6 +231,15 @@
 <br />
 <div>total spent this week: {totalSpentCurrent}</div>
 <div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
+
+<div class="html-content">
+	<div>big snow:</div>
+	{#if isLoadingPricing}
+		<p>Loading...</p>
+	{:else}
+		{bigSnowPricing}
+	{/if}
+</div>
 
 <div class="search-container">
 	<input type="text" class="input-field" bind:value={searchQuery} placeholder="Search..." />
@@ -286,8 +310,6 @@
 		</div>
 	</div>
 {/if}
-
-{JSON.stringify(data)}
 
 <style>
 	:root {
@@ -545,5 +567,33 @@
 
 	.cancel-btn:hover {
 		background-color: var(--secondary-hover);
+	}
+
+	.html-content {
+		margin-top: 20px;
+		padding: 15px;
+		background-color: #f3f4f6;
+		border-radius: 4px;
+		overflow-x: auto;
+		border: 1px solid var(--border-color);
+	}
+
+	.html-content pre {
+		white-space: pre-wrap;
+		word-wrap: break-word;
+		font-family: monospace;
+		margin: 0;
+		color: var(--text-color);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.html-content {
+			background-color: #2d2d2d;
+			border-color: #374151;
+		}
+
+		.html-content pre {
+			color: #e5e7eb;
+		}
 	}
 </style>

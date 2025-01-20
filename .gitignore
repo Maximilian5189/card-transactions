@@ -5,3 +5,4 @@ credentials.json
 database.db
 todo
 run_local
+node_modules

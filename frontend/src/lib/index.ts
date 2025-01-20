@@ -8,6 +8,9 @@ export type transaction = {
 	messageID?: string;
 };
 export const server = isDev ? 'http://localhost:8080' : 'https://card-transactions-backend.fly.dev';
+export const nodeServer = isDev
+	? 'http://localhost:3000'
+	: 'https://card-transactions-backend.fly.dev'; // TODO
 
 export function getStartOfWeekTimestamp(offset = 0) {
 	const today = new Date();
@@ -73,4 +76,13 @@ export const getWeekNumber = (d: Date) => {
 	const weekNo = Math.ceil(((d.valueOf() - yearStart.valueOf()) / 86400000 + 1) / 7);
 
 	return weekNo;
+};
+
+export const fetchAndPrintHTML = async (url: string, token: string): Promise<string> => {
+	const response = await fetch(
+		`${nodeServer}/fetch-website?t=${token}&url=${encodeURIComponent(url)}`
+	);
+
+	const data = await response.json();
+	return JSON.stringify(data);
 };
