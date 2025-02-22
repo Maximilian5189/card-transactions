@@ -236,7 +236,8 @@ func (e *EmailService) GetEmails() {
 			strings.Contains(transaction.Name, "CROOKED") ||
 			strings.Contains(transaction.Name, "Peacock") ||
 			strings.Contains(transaction.Name, "SYNERGY FITNESS") ||
-			strings.Contains(transaction.Name, "SPOTIFY") {
+			strings.Contains(transaction.Name, "SPOTIFY") ||
+			strings.Contains(transaction.Name, "US MOBILE") {
 			transaction.Amount = 0
 		}
 		err = d.Insert(transaction)

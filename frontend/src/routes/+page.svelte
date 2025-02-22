@@ -44,6 +44,7 @@
 	let totalSpentCurrent = 0;
 	let weeksOffset = 0;
 	let bigSnowPricing = '';
+	let patagoniaGlacierPricing = '';
 	let isLoadingPricing = false;
 	const currBudget = 1000;
 
@@ -172,8 +173,17 @@
 			isLoadingPricing = true;
 			bigSnowPricing = await fetchAndPrintHTML(
 				'https://bigsnowad.snowcloud.shop/shop/page/1E7B1BEE-0982-4F86-0F80-FC2A96F03E19',
+				'h3.text-primary.mb-n1',
 				token
 			);
+
+			patagoniaGlacierPricing = await fetchAndPrintHTML(
+				'https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated',
+				'span.sales ',
+				token
+			);
+
+			// https://www.patagonia.com/product/womens-nano-puff-insulated-jacket/889833308695.html
 		} catch (error) {
 			bigSnowPricing = 'le error';
 		} finally {
@@ -238,6 +248,15 @@
 		<p>Loading...</p>
 	{:else}
 		{bigSnowPricing}
+	{/if}
+</div>
+
+<div class="html-content">
+	<div>patagonia glacier:</div>
+	{#if isLoadingPricing}
+		<p>Loading...</p>
+	{:else}
+		{patagoniaGlacierPricing}
 	{/if}
 </div>
 

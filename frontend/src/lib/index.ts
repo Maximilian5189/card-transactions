@@ -76,9 +76,13 @@ export const getWeekNumber = (d: Date) => {
 	return weekNo;
 };
 
-export const fetchAndPrintHTML = async (url: string, token: string): Promise<string> => {
+export const fetchAndPrintHTML = async (
+	url: string,
+	selector: string,
+	token: string
+): Promise<string> => {
 	const response = await fetch(
-		`${nodeServer}/fetch-website?t=${token}&url=${encodeURIComponent(url)}`
+		`${nodeServer}/fetch-website?t=${token}&url=${encodeURIComponent(url)}&selector=${encodeURIComponent(selector)}`
 	);
 
 	const data = await response.json();

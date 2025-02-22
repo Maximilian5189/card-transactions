@@ -23,6 +23,7 @@ const authMiddleware = (
 
 app.get("/fetch-website", authMiddleware, async (req, res): Promise<void> => {
   const url = req.query.url as string;
+  const selector = req.query.selector as string;
   if (!url) {
     res.status(400).json({ error: "URL parameter is required" });
   }
@@ -36,13 +37,13 @@ app.get("/fetch-website", authMiddleware, async (req, res): Promise<void> => {
 
     await page.goto(url, { waitUntil: "networkidle0" });
 
-    const contents = await page.evaluate(() => {
-      const elements = document.querySelectorAll("h3.text-primary.mb-n1");
+    const contents = await page.evaluate((selector) => {
+      const elements = document.querySelectorAll(selector);
       return Array.from(elements).map((element) => ({
         text: element.textContent?.trim() || "",
         html: element.innerHTML,
       }));
-    });
+    }, selector);
 
     await browser.close();
 
