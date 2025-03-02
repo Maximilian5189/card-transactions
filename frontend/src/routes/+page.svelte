@@ -171,19 +171,10 @@
 
 		try {
 			isLoadingPricing = true;
-			bigSnowPricing = await fetchAndPrintHTML(
-				'https://bigsnowad.snowcloud.shop/shop/page/1E7B1BEE-0982-4F86-0F80-FC2A96F03E19',
-				'h3.text-primary.mb-n1',
-				token
-			);
 
-			patagoniaGlacierPricing = await fetchAndPrintHTML(
-				'https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated',
-				'span.sales ',
-				token
-			);
+			patagoniaGlacierPricing = await fetchAndPrintHTML('patagonia-glacier', token);
 
-			// https://www.patagonia.com/product/womens-nano-puff-insulated-jacket/889833308695.html
+			bigSnowPricing = await fetchAndPrintHTML('bigsnow', token);
 		} catch (error) {
 			bigSnowPricing = 'le error';
 		} finally {
