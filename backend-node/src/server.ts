@@ -26,13 +26,10 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
     "https://bigsnowad.snowcloud.shop/shop/page/1E7B1BEE-0982-4F86-0F80-FC2A96F03E19";
 
   const selector = "h3.text-primary.mb-n1";
-  if (!url) {
-    res.status(400).json({ error: "URL parameter is required" });
-  }
 
   try {
     const browser = await puppeteer.launch({
-      headless: false,
+      headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
     const page = await browser.newPage();
@@ -60,48 +57,50 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
   }
 });
 
-const patagoniaRequestHandler = async (req, res): Promise<void> => {
-  const url =
-    "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated";
+const patagoniaRequestHandler =
+  (url: string) =>
+  async (req, res): Promise<void> => {
+    try {
+      const browser = await puppeteer.launch({
+        headless: true,
+        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      });
+      const page = await browser.newPage();
 
-  const selector = "span.value";
-  if (!url) {
-    res.status(400).json({ error: "URL parameter is required" });
-  }
+      await page.goto(url, { waitUntil: "networkidle0" });
 
-  try {
-    const browser = await puppeteer.launch({
-      headless: false,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-    const page = await browser.newPage();
+      const contents = await page.evaluate((selector) => {
+        const elements = document.querySelectorAll(selector);
+        return Array.from(elements).map((element) => ({
+          text: element.textContent?.trim() || "",
+          html: element.innerHTML,
+        }));
+      }, "span.value");
 
-    await page.goto(url, { waitUntil: "networkidle0" });
+      await browser.close();
 
-    const contents = await page.evaluate((selector) => {
-      const elements = document.querySelectorAll(selector);
-      return Array.from(elements).map((element) => ({
-        text: element.textContent?.trim() || "",
-        html: element.innerHTML,
-      }));
-    }, selector);
-
-    await browser.close();
-
-    if (contents.length === 0) {
-      res.json({ error: "No matching elements found" });
-    } else {
-      res.json({ contents });
+      if (contents.length === 0) {
+        res.json({ error: "No matching elements found" });
+      } else {
+        res.json({ contents });
+      }
+    } catch (error) {
+      console.error("Error fetching website:", error);
+      res.status(500).json({ error: "Failed to fetch website" });
     }
-  } catch (error) {
-    console.error("Error fetching website:", error);
-    res.status(500).json({ error: "Failed to fetch website" });
-  }
-};
+  };
 
-app.get("/patagonia-glacier", authMiddleware, patagoniaRequestHandler);
+app.get("/patagonia-glacier", authMiddleware, (req, res) =>
+  patagoniaRequestHandler(
+    "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated"
+  )(req, res)
+);
 
-app.get("/patagonia-nano-puff", authMiddleware, patagoniaRequestHandler);
+app.get("/patagonia-nano-puff", authMiddleware, (req, res) =>
+  patagoniaRequestHandler(
+    "https://www.patagonia.com/product/mens-nano-puff-jacket/84212.html"
+  )(req, res)
+);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

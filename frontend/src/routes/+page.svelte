@@ -45,6 +45,7 @@
 	let weeksOffset = 0;
 	let bigSnowPricing = '';
 	let patagoniaGlacierPricing = '';
+	let patagoniaNanoPuffPricing = '';
 	let isLoadingPricing = false;
 	const currBudget = 1000;
 
@@ -173,7 +174,7 @@
 			isLoadingPricing = true;
 
 			patagoniaGlacierPricing = await fetchAndPrintHTML('patagonia-glacier', token);
-
+			patagoniaNanoPuffPricing = await fetchAndPrintHTML('patagonia-nano-puff', token);
 			bigSnowPricing = await fetchAndPrintHTML('bigsnow', token);
 		} catch (error) {
 			bigSnowPricing = 'le error';
@@ -248,6 +249,15 @@
 		<p>Loading...</p>
 	{:else}
 		{patagoniaGlacierPricing}
+	{/if}
+</div>
+
+<div class="html-content">
+	<div>patagonia puff:</div>
+	{#if isLoadingPricing}
+		<p>Loading...</p>
+	{:else}
+		{patagoniaNanoPuffPricing}
 	{/if}
 </div>
 
