@@ -60,50 +60,49 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
   }
 });
 
-app.get(
-  "/patagonia-glacier",
-  authMiddleware,
-  async (req, res): Promise<void> => {
-    const url =
-      "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated";
+const patagoniaRequestHandler = async (req, res): Promise<void> => {
+  const url =
+    "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated";
 
-    const selector = "span.value";
-    if (!url) {
-      res.status(400).json({ error: "URL parameter is required" });
-    }
-
-    try {
-      const browser = await puppeteer.launch({
-        headless: false,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      });
-      const page = await browser.newPage();
-
-      await page.goto(url, { waitUntil: "networkidle0" });
-
-      const contents = await page.evaluate((selector) => {
-        const elements = document.querySelectorAll(selector);
-        return Array.from(elements).map((element) => ({
-          text: element.textContent?.trim() || "",
-          html: element.innerHTML,
-        }));
-      }, selector);
-
-      await browser.close();
-
-      if (contents.length === 0) {
-        res.json({ error: "No matching elements found" });
-      } else {
-        res.json({ contents });
-      }
-    } catch (error) {
-      console.error("Error fetching website:", error);
-      res.status(500).json({ error: "Failed to fetch website" });
-    }
+  const selector = "span.value";
+  if (!url) {
+    res.status(400).json({ error: "URL parameter is required" });
   }
-);
 
-// https://www.patagonia.com/product/womens-nano-puff-insulated-jacket/889833308695.html
+  try {
+    const browser = await puppeteer.launch({
+      headless: false,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+    const page = await browser.newPage();
+
+    await page.goto(url, { waitUntil: "networkidle0" });
+
+    const contents = await page.evaluate((selector) => {
+      const elements = document.querySelectorAll(selector);
+      return Array.from(elements).map((element) => ({
+        text: element.textContent?.trim() || "",
+        html: element.innerHTML,
+      }));
+    }, selector);
+
+    await browser.close();
+
+    if (contents.length === 0) {
+      res.json({ error: "No matching elements found" });
+    } else {
+      res.json({ contents });
+    }
+  } catch (error) {
+    console.error("Error fetching website:", error);
+    res.status(500).json({ error: "Failed to fetch website" });
+  }
+};
+
+app.get("/patagonia-glacier", authMiddleware, patagoniaRequestHandler);
+
+app.get("/patagonia-nano-puff", authMiddleware, patagoniaRequestHandler);
+
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
