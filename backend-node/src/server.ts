@@ -30,9 +30,22 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--window-size=1920,1080",
+        "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      ],
     });
     const page = await browser.newPage();
+
+    await page.setViewport({ width: 1920, height: 1080 });
+
+    await page.setExtraHTTPHeaders({
+      "Accept-Language": "en-US,en;q=0.9",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+    });
 
     await page.goto(url, { waitUntil: "networkidle0" });
 
@@ -63,9 +76,22 @@ const patagoniaRequestHandler =
     try {
       const browser = await puppeteer.launch({
         headless: true,
-        args: ["--no-sandbox", "--disable-setuid-sandbox"],
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--window-size=1920,1080",
+          "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        ],
       });
       const page = await browser.newPage();
+
+      await page.setViewport({ width: 1920, height: 1080 });
+
+      await page.setExtraHTTPHeaders({
+        "Accept-Language": "en-US,en;q=0.9",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+      });
 
       await page.goto(url, { waitUntil: "networkidle0" });
 
@@ -82,7 +108,7 @@ const patagoniaRequestHandler =
       if (contents.length === 0) {
         res.json({ error: "No matching elements found" });
       } else {
-        res.json({ contents });
+        res.json({ contents: contents[0] });
       }
     } catch (error) {
       console.error("Error fetching website:", error);
@@ -98,7 +124,7 @@ app.get("/patagonia-glacier", authMiddleware, (req, res) =>
 
 app.get("/patagonia-nano-puff", authMiddleware, (req, res) =>
   patagoniaRequestHandler(
-    "https://www.patagonia.com/product/mens-nano-puff-jacket/84212.html"
+    "https://www.patagonia.com/product/womens-nano-puff-insulated-jacket/84217.html?dwvar_84217_color=BLK"
   )(req, res)
 );
 

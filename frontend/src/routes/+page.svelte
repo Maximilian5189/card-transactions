@@ -173,11 +173,17 @@
 		try {
 			isLoadingPricing = true;
 
-			patagoniaGlacierPricing = await fetchAndPrintHTML('patagonia-glacier', token);
-			patagoniaNanoPuffPricing = await fetchAndPrintHTML('patagonia-nano-puff', token);
-			bigSnowPricing = await fetchAndPrintHTML('bigsnow', token);
+			const [patagoniaGlacierResult, patagoniaNanoPuffResult, bigSnowResult] = await Promise.all([
+				fetchAndPrintHTML('patagonia-glacier', token),
+				fetchAndPrintHTML('patagonia-nano-puff', token),
+				fetchAndPrintHTML('bigsnow', token)
+			]);
+
+			patagoniaGlacierPricing = patagoniaGlacierResult;
+			patagoniaNanoPuffPricing = patagoniaNanoPuffResult;
+			bigSnowPricing = bigSnowResult;
 		} catch (error) {
-			bigSnowPricing = 'le error';
+			console.log(error);
 		} finally {
 			isLoadingPricing = false;
 		}
@@ -234,31 +240,33 @@
 <div>total spent this week: {totalSpentCurrent}</div>
 <div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
 
-<div class="html-content">
-	<div>big snow:</div>
-	{#if isLoadingPricing}
-		<p>Loading...</p>
-	{:else}
-		{bigSnowPricing}
-	{/if}
-</div>
+<div class="pricing-container">
+	<div class="pricing-item">
+		<div>big snow:</div>
+		{#if isLoadingPricing}
+			<p>Loading...</p>
+		{:else}
+			{bigSnowPricing}
+		{/if}
+	</div>
 
-<div class="html-content">
-	<div>patagonia glacier:</div>
-	{#if isLoadingPricing}
-		<p>Loading...</p>
-	{:else}
-		{patagoniaGlacierPricing}
-	{/if}
-</div>
+	<div class="pricing-item">
+		<div>patagonia glacier:</div>
+		{#if isLoadingPricing}
+			<p>Loading...</p>
+		{:else}
+			{patagoniaGlacierPricing}
+		{/if}
+	</div>
 
-<div class="html-content">
-	<div>patagonia puff:</div>
-	{#if isLoadingPricing}
-		<p>Loading...</p>
-	{:else}
-		{patagoniaNanoPuffPricing}
-	{/if}
+	<div class="pricing-item">
+		<div>patagonia puff:</div>
+		{#if isLoadingPricing}
+			<p>Loading...</p>
+		{:else}
+			{patagoniaNanoPuffPricing}
+		{/if}
+	</div>
 </div>
 
 <div class="search-container">
@@ -587,6 +595,32 @@
 
 	.cancel-btn:hover {
 		background-color: var(--secondary-hover);
+	}
+
+	.pricing-container {
+		display: flex;
+		flex-direction: row;
+		gap: 2rem;
+		flex-wrap: wrap;
+		margin: 2rem 0;
+	}
+
+	.pricing-item {
+		flex: 1;
+		min-width: 250px;
+		padding: 1rem;
+		border: 1px solid #ccc;
+		border-radius: 8px;
+	}
+
+	@media (max-width: 768px) {
+		.pricing-container {
+			flex-direction: column;
+		}
+
+		.pricing-item {
+			width: 100%;
+		}
 	}
 
 	.html-content {
