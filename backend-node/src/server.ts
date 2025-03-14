@@ -30,6 +30,7 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
+      timeout: 60000,
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -78,6 +79,7 @@ const patagoniaRequestHandler =
     try {
       const browser = await puppeteer.launch({
         headless: true,
+        timeout: 60000,
         args: [
           "--no-sandbox",
           "--disable-setuid-sandbox",
