@@ -34,6 +34,8 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
         "--no-sandbox",
         "--disable-setuid-sandbox",
         "--window-size=1920,1080",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
         "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
       ],
     });
@@ -72,7 +74,7 @@ app.get("/bigsnow", authMiddleware, async (req, res): Promise<void> => {
 
 const patagoniaRequestHandler =
   (url: string) =>
-  async (req, res): Promise<void> => {
+  async (req: express.Request, res: express.Response): Promise<void> => {
     try {
       const browser = await puppeteer.launch({
         headless: true,
@@ -80,6 +82,8 @@ const patagoniaRequestHandler =
           "--no-sandbox",
           "--disable-setuid-sandbox",
           "--window-size=1920,1080",
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
           "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         ],
       });
