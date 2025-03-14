@@ -121,15 +121,12 @@ func (e *EmailService) GetEmails() {
 					isFidelity = true
 				} else if strings.Contains(h.Value, "hsbcalerts") {
 					isHSBC = true
-					// Debug HSBC headers
-					fmt.Println("HSBC Email Headers:")
-					for _, header := range msg.Payload.Headers {
-						fmt.Printf("%s: %s\n", header.Name, header.Value)
-					}
 				}
 			}
 
 			if h.Name == "Message-ID" {
+				transaction.MessageID = h.Value
+			} else if h.Name == "Message-Id" {
 				transaction.MessageID = h.Value
 			}
 
