@@ -56,6 +56,21 @@ func getValue(body string, key string) string {
 	return ""
 }
 
+func formatHSBCBody(body string) string {
+	// Remove the header part
+	if idx := strings.Index(body, "Purchase Details:"); idx != -1 {
+		body = body[idx:]
+	}
+
+	// Add newlines before each known field
+	fields := []string{"Amount:", "Date:", "Time:", "Merchant:", "Location:"}
+	for _, field := range fields {
+		body = strings.ReplaceAll(body, field, "\n"+field)
+	}
+
+	return body
+}
+
 func (e *EmailService) GetEmails() {
 	user := "me"
 	r, err := e.srv.Users.Messages.List(user).Do()
@@ -77,6 +92,7 @@ func (e *EmailService) GetEmails() {
 
 		isDiscover := false
 		isFidelity := false
+		isHSBC := false
 		isTransaction := false
 		dateError := false
 		from := ""
@@ -103,6 +119,8 @@ func (e *EmailService) GetEmails() {
 					isDiscover = true
 				} else if strings.Contains(h.Value, "fidelity") {
 					isFidelity = true
+				} else if strings.Contains(h.Value, "hsbcalerts") {
+					isHSBC = true
 				}
 			}
 
@@ -112,7 +130,8 @@ func (e *EmailService) GetEmails() {
 
 			if h.Name == "Subject" &&
 				(strings.Contains(h.Value, "Transaction Alert") || strings.Contains(h.Value, "Transaction Notification") ||
-					strings.Contains(h.Value, "A charge was authorized")) {
+					strings.Contains(h.Value, "A charge was authorized") ||
+					(isHSBC && strings.Contains(h.Value, "HSBC Credit Card-Transaction Notification"))) {
 				isTransaction = true
 			}
 		}
@@ -121,7 +140,7 @@ func (e *EmailService) GetEmails() {
 			e.logger.Info("attention! Date error for email from " + from)
 		}
 
-		if (!isDiscover && !isFidelity) || !isTransaction {
+		if (!isDiscover && !isFidelity && !isHSBC) || !isTransaction {
 			continue
 		}
 
@@ -173,6 +192,31 @@ func (e *EmailService) GetEmails() {
 								} else {
 									transaction.Amount = a
 								}
+							}
+						} else if isHSBC {
+							bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
+							if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
+								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
+								continue
+							}
+							body := string(bodyBytes)
+
+							// Format the body to work with getValue
+							formattedBody := formatHSBCBody(body)
+
+							amountStr := getValue(formattedBody, "Amount:")
+							if amountStr != "" {
+								a, err := strconv.ParseFloat(amountStr, 64)
+								if err != nil {
+									e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+								} else {
+									transaction.Amount = a
+								}
+							}
+
+							merchant := getValue(formattedBody, "Merchant:")
+							if merchant != "" {
+								transaction.Name = merchant
 							}
 						}
 					}
