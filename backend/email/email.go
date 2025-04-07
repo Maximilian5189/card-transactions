@@ -46,12 +46,15 @@ func getValue(body string, key string) string {
 		}
 	}
 
-	regex := key + `\s*(.*)`
+	regex := key + `\s*?(.*)`
 	re := regexp.MustCompile(regex)
 	match := re.FindStringSubmatch(line)
 	if len(match) > 1 {
 		sanitized := strings.ReplaceAll(match[1], "\r", "")
-		return strings.ReplaceAll(sanitized, "$", "")
+		sanitized = strings.ReplaceAll(sanitized, "$", "")
+		sanitized = strings.ReplaceAll(sanitized, ",", "")
+		sanitized = strings.TrimSpace(sanitized)
+		return sanitized
 	}
 	return ""
 }
@@ -103,6 +106,7 @@ func (e *EmailService) GetEmails() {
 				sanitized = strings.ReplaceAll(sanitized, "(CET)", "")
 				sanitized = strings.ReplaceAll(sanitized, "(GMT)", "")
 				sanitized = strings.ReplaceAll(sanitized, "(EST)", "")
+				sanitized = strings.ReplaceAll(sanitized, "(CST)", "")
 				sanitized = strings.TrimSpace(sanitized)
 				layout := "Mon, 2 Jan 2006 15:04:05 -0700"
 				t, err := time.Parse(layout, sanitized)
