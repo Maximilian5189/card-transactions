@@ -44,7 +44,6 @@
 	let totalSpentCurrent = 0;
 	let weeksOffset = 0;
 	let bigSnowPricing = '';
-	let patagoniaGlacierPricing = '';
 	let patagoniaNanoPuffPricing = '';
 	let isLoadingPricing = false;
 	const currBudget = 1000;
@@ -173,13 +172,11 @@
 		try {
 			isLoadingPricing = true;
 
-			const [patagoniaGlacierResult, patagoniaNanoPuffResult, bigSnowResult] = await Promise.all([
-				fetchAndPrintHTML('patagonia-glacier', token),
+			const [patagoniaNanoPuffResult, bigSnowResult] = await Promise.all([
 				fetchAndPrintHTML('patagonia-nano-puff', token),
 				fetchAndPrintHTML('bigsnow', token)
 			]);
 
-			patagoniaGlacierPricing = patagoniaGlacierResult;
 			patagoniaNanoPuffPricing = patagoniaNanoPuffResult;
 			bigSnowPricing = bigSnowResult;
 		} catch (error) {
@@ -191,10 +188,6 @@
 </script>
 
 <h1>Welcome to Jochen</h1>
-
-<button class="nav-btn" on:click={() => goto(`/old?${$page.url.searchParams.toString()}`)}
-	>Switch to Old View</button
->
 
 <div class="form-group">
 	<input type="text" class="input-field" bind:value={name} placeholder="name" />
@@ -247,15 +240,6 @@
 			<p>Loading...</p>
 		{:else}
 			{bigSnowPricing}
-		{/if}
-	</div>
-
-	<div class="pricing-item">
-		<div>patagonia glacier:</div>
-		{#if isLoadingPricing}
-			<p>Loading...</p>
-		{:else}
-			{patagoniaGlacierPricing}
 		{/if}
 	</div>
 

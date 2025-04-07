@@ -99,7 +99,11 @@ const patagoniaRequestHandler =
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
       });
 
-      await page.goto(url, { waitUntil: "networkidle0" });
+      try {
+        await page.goto(url, { waitUntil: "networkidle0", timeout: 30000 });
+      } catch (e) {
+        console.log(e);
+      }
 
       const contents = await page.evaluate((selector) => {
         const elements = document.querySelectorAll(selector);
@@ -122,11 +126,11 @@ const patagoniaRequestHandler =
     }
   };
 
-app.get("/patagonia-glacier", authMiddleware, (req, res) =>
-  patagoniaRequestHandler(
-    "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated"
-  )(req, res)
-);
+// app.get("/patagonia-glacier", authMiddleware, (req, res) =>
+//   patagoniaRequestHandler(
+//     "https://www.patagonia.com/product/mens-jackson-glacier-down-jacket/27921.html?cgid=mens-jackets-vests-insulated"
+//   )(req, res)
+// );
 
 app.get("/patagonia-nano-puff", authMiddleware, (req, res) =>
   patagoniaRequestHandler(
