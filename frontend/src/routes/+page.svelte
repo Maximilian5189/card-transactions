@@ -79,7 +79,7 @@
 	async function createNewTransactionHandler() {
 		let d;
 		if (date) {
-			d = new Date(date).valueOf();
+			d = new Date(date + 'T00:00:00').valueOf();
 		} else {
 			d = new Date().valueOf();
 		}
