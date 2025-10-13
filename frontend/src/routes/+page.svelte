@@ -99,6 +99,16 @@
 		closeDeleteModal();
 	}
 
+	async function reverseTransactionHandler(transactionToReverse: transaction) {
+		const reversedTransaction = {
+			name: `Reversal: ${transactionToReverse.name}`,
+			amount: -transactionToReverse.amount,
+			date: transactionToReverse.date * 1000
+		};
+		await postTransaction(reversedTransaction, token);
+		await calculate();
+	}
+
 	function openDeleteModal(transaction: { id: string; name: string }) {
 		transactionToDelete = transaction;
 		showDeleteModal = true;
@@ -296,6 +306,14 @@
 								title="Delete transaction"
 							>
 								Delete
+							</button>
+						{:else}
+							<button
+								class="secondary-btn"
+								on:click={() => reverseTransactionHandler(row)}
+								title="Reverse transaction"
+							>
+								Reverse
 							</button>
 						{/if}
 					</td>
