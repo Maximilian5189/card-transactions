@@ -47,7 +47,7 @@ func (t *TransactionsDB) Insert(transaction Transaction) error {
 
 func (t *TransactionsDB) Select(from int64, to int64) ([]Transaction, error) {
 	rows, err := t.db.Query(
-		"SELECT id, name, messageid, date, amount FROM transactions where date > ? and date < ?", from, to)
+		"SELECT id, name, messageid, date, amount FROM transactions where date >= ? and date < ?", from, to)
 	if err != nil {
 		log.Fatal(err)
 	}
