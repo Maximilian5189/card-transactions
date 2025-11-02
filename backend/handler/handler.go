@@ -12,10 +12,11 @@ import (
 
 type Handler struct {
 	logger logger.Logger
+	db     *db.TransactionsDB
 }
 
-func NewHandler(logger logger.Logger) Handler {
-	return Handler{logger}
+func NewHandler(logger logger.Logger, database *db.TransactionsDB) Handler {
+	return Handler{logger, database}
 }
 
 func (handler *Handler) handleErr(err error, w http.ResponseWriter) error {
@@ -29,10 +30,6 @@ func (handler *Handler) handleErr(err error, w http.ResponseWriter) error {
 
 func (handler *Handler) GetTransactions(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactionsDB(logger)
-		if handler.handleErr(err, w) != nil {
-			return
-		}
 
 		var from time.Time
 		if r.URL.Query().Get("from") != "" {
@@ -58,7 +55,7 @@ func (handler *Handler) GetTransactions(logger logger.Logger) func(http.Response
 
 		to := from.AddDate(0, 0, 7)
 		to = time.Date(to.Year(), to.Month(), to.Day(), hour, min, 0, 0, to.Location())
-		transactions, err := d.Select(from.Unix(), to.Unix())
+		transactions, err := handler.db.Select(from.Unix(), to.Unix())
 		if handler.handleErr(err, w) != nil {
 			return
 		}
@@ -71,11 +68,6 @@ func (handler *Handler) GetTransactions(logger logger.Logger) func(http.Response
 
 func (handler *Handler) PostTransaction(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		d, err := db.NewTransactionsDB(logger)
-		if handler.handleErr(err, w) != nil {
-			return
-		}
-
 		body, err := io.ReadAll(r.Body)
 		if handler.handleErr(err, w) != nil {
 			return
@@ -89,7 +81,7 @@ func (handler *Handler) PostTransaction(logger logger.Logger) func(http.Response
 		}
 		transaction.Date /= 1000
 
-		err = d.Insert(transaction)
+		err = handler.db.Insert(transaction)
 		if handler.handleErr(err, w) != nil {
 			return
 		}
@@ -99,10 +91,6 @@ func (handler *Handler) PostTransaction(logger logger.Logger) func(http.Response
 func (handler *Handler) DeleteTransaction(logger logger.Logger) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Methods", "DELETE")
-		d, err := db.NewTransactionsDB(logger)
-		if handler.handleErr(err, w) != nil {
-			return
-		}
 
 		id := r.URL.Query().Get("id")
 		if id == "" {
@@ -114,7 +102,7 @@ func (handler *Handler) DeleteTransaction(logger logger.Logger) func(http.Respon
 			return
 		}
 
-		err = d.DeleteByID(i)
+		err = handler.db.DeleteByID(i)
 		handler.handleErr(err, w)
 	}
 }

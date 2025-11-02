@@ -20,9 +20,10 @@ import (
 type EmailService struct {
 	logger logger.Logger
 	srv    *gmail.Service
+	db     *db.TransactionsDB
 }
 
-func NewEmailService(logger logger.Logger) (EmailService, error) {
+func NewEmailService(logger logger.Logger, database *db.TransactionsDB) (EmailService, error) {
 	ctx := context.Background()
 	client := auth.GetClient()
 
@@ -32,7 +33,7 @@ func NewEmailService(logger logger.Logger) (EmailService, error) {
 		return EmailService{}, err
 	}
 
-	return EmailService{logger, srv}, nil
+	return EmailService{logger, srv, database}, nil
 }
 
 func getValue(body string, key string) string {
@@ -79,11 +80,7 @@ func (e *EmailService) GetEmails() {
 	r, err := e.srv.Users.Messages.List(user).Do()
 	if err != nil {
 		e.logger.Error(fmt.Sprintf("Unable to retrieve emails: %v", err))
-	}
-
-	d, err := db.NewTransactionsDB(e.logger)
-	if err != nil {
-		e.logger.Error(fmt.Sprintf("Unable to open DB: %v", err))
+		return
 	}
 
 	for _, m := range r.Messages {
@@ -291,7 +288,7 @@ func (e *EmailService) GetEmails() {
 			strings.Contains(transaction.Name, "SQ *ALMA") {
 			transaction.Amount = 0
 		}
-		err = d.Insert(transaction)
+		err = e.db.Insert(transaction)
 
 		// we always process all emails and messageid UNIQUE constraint on DB level avoids duplicates
 		// so we don't log these errors to not clutter the logs, as these errors are expected

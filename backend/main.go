@@ -2,6 +2,7 @@ package main
 
 import (
 	"backend/backup"
+	"backend/db"
 	"backend/email"
 	"backend/handler"
 	"backend/logger"
@@ -47,7 +48,14 @@ func main() {
 	}
 
 	logger := logger.NewLogger()
-	e, err := email.NewEmailService(logger)
+
+	d, err := db.NewTransactionsDB(logger)
+	if err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+	defer d.Close()
+
+	e, err := email.NewEmailService(logger, d)
 
 	if err == nil {
 
@@ -98,7 +106,7 @@ func main() {
 		logger.Info("Not in production, will not create backup")
 	}
 
-	h := handler.NewHandler(logger)
+	h := handler.NewHandler(logger, d)
 	r := mux.NewRouter()
 
 	r.HandleFunc("/transactions", h.GetTransactions(logger)).Methods("GET")

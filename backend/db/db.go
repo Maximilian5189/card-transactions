@@ -89,3 +89,7 @@ func (t *TransactionsDB) DeleteByID(ID int) error {
 
 	return err
 }
+
+func (t *TransactionsDB) Close() error {
+	return t.db.Close()
+}
