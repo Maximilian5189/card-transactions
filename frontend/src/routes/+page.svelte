@@ -183,12 +183,12 @@
 			isLoadingPricing = true;
 
 			const [patagoniaNanoPuffResult, bigSnowResult] = await Promise.all([
-				fetchAndPrintHTML('patagonia-nano-puff', token),
-				fetchAndPrintHTML('bigsnow', token)
+				fetchAndPrintHTML('patagonia-nano-puff', token)
+				// fetchAndPrintHTML('bigsnow', token)
 			]);
 
 			patagoniaNanoPuffPricing = patagoniaNanoPuffResult;
-			bigSnowPricing = bigSnowResult;
+			// bigSnowPricing = bigSnowResult;
 		} catch (error) {
 			console.log(error);
 		} finally {
@@ -244,14 +244,14 @@
 <div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
 
 <div class="pricing-container">
-	<div class="pricing-item">
+	<!-- <div class="pricing-item">
 		<div>big snow:</div>
 		{#if isLoadingPricing}
 			<p>Loading...</p>
 		{:else}
 			{bigSnowPricing}
 		{/if}
-	</div>
+	</div> -->
 
 	<div class="pricing-item">
 		<div>patagonia puff:</div>
