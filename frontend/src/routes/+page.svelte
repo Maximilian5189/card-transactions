@@ -46,7 +46,7 @@
 	let bigSnowPricing = '';
 	let patagoniaNanoPuffPricing = '';
 	let isLoadingPricing = false;
-	const currBudget = 1000;
+	const currBudget = 1100;
 
 	const currentWeek = getWeekNumber(new Date());
 	pastWeeksToDisplay = currentWeek - 1;
@@ -137,7 +137,8 @@
 
 			let budget = 1000;
 			// timestamp for the week since I have new budget
-			if (t >= 19975 * 24 * 60 * 60 * 1000) {
+			// 20458 is days, this number should be incremented +7 if budget is changed
+			if (t >= 20458 * 24 * 60 * 60 * 1000) {
 				budget = currBudget;
 			}
 			// comment in to find current day for a new if condition
