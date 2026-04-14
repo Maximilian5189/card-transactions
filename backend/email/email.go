@@ -90,9 +90,9 @@ func (e *EmailService) GetEmails() {
 			continue
 		}
 
-		isDiscover := false
 		isFidelity := false
 		isHSBC := false
+		isCapitalOne := false
 		isTransaction := false
 		dateError := false
 		from := ""
@@ -116,12 +116,12 @@ func (e *EmailService) GetEmails() {
 				}
 			} else if h.Name == "From" {
 				from = h.Value
-				if strings.Contains(h.Value, "Discover") {
-					isDiscover = true
-				} else if strings.Contains(h.Value, "fidelity") {
+				if strings.Contains(h.Value, "fidelity") {
 					isFidelity = true
 				} else if strings.Contains(h.Value, "hsbcalerts") {
 					isHSBC = true
+				} else if strings.Contains(h.Value, "Capital One") {
+					isCapitalOne = true
 				}
 			}
 
@@ -134,6 +134,7 @@ func (e *EmailService) GetEmails() {
 			if h.Name == "Subject" &&
 				(strings.Contains(h.Value, "Transaction Alert") || strings.Contains(h.Value, "Transaction Notification") ||
 					strings.Contains(h.Value, "A charge was authorized") ||
+					strings.Contains(h.Value, "A new transaction was charged to your account") ||
 					(isHSBC && strings.Contains(h.Value, "HSBC Credit Card-Transaction Notification"))) {
 				isTransaction = true
 			}
@@ -143,60 +144,18 @@ func (e *EmailService) GetEmails() {
 			e.logger.Info("attention! Date error for email from " + from)
 		}
 
-		if (!isDiscover && !isFidelity && !isHSBC) || !isTransaction {
+		if (!isFidelity && !isHSBC && !isCapitalOne) || !isTransaction {
 			continue
 		}
 
 		// TODO I think this is never called
 		if msg.Payload.Body.Data != "" {
 			fmt.Println("------------>")
-			if isDiscover {
-				bodyBytes, err := base64.StdEncoding.DecodeString(msg.Payload.Body.Data)
-				if err != nil {
-					e.logger.Error(fmt.Sprintf("Unable to retrieve content: %v", err))
-				}
-
-				body := string(bodyBytes)
-				name := getValue(body, "Merchant:")
-				if name != "" {
-					transaction.Name = name
-				}
-
-				amount := getValue(body, "Amount:")
-				if amount != "" {
-					a, err := strconv.ParseFloat(amount, 64)
-					if err != nil {
-						e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
-					} else {
-						transaction.Amount = a
-					}
-				}
-			}
 		} else if len(msg.Payload.Parts) > 0 {
 			for _, part := range msg.Payload.Parts {
 				if part.MimeType == "text/plain" {
 					if part.Body.Data != "" {
-						if isDiscover {
-							bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
-							if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
-								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
-							}
-							body := string(bodyBytes)
-							name := getValue(body, "Merchant:")
-							if name != "" {
-								transaction.Name = name
-							}
-
-							amount := getValue(body, "Amount:")
-							if amount != "" {
-								a, err := strconv.ParseFloat(amount, 64)
-								if err != nil {
-									e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
-								} else {
-									transaction.Amount = a
-								}
-							}
-						} else if isHSBC {
+						if isHSBC {
 							bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
 							if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
 								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
@@ -220,6 +179,29 @@ func (e *EmailService) GetEmails() {
 							merchant := getValue(formattedBody, "Merchant:")
 							if merchant != "" {
 								transaction.Name = merchant
+							}
+						} else if isCapitalOne {
+							bodyBytes, err := base64.StdEncoding.DecodeString(part.Body.Data)
+							if err != nil && !strings.Contains(err.Error(), "illegal base64 data") {
+								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
+							} else {
+								body := string(bodyBytes)
+								merchantRegex := regexp.MustCompile(`,\s*at\s+(.+?),\s+a pending authorization`)
+								merchantMatch := merchantRegex.FindStringSubmatch(body)
+								if len(merchantMatch) > 1 {
+									transaction.Name = strings.TrimSpace(merchantMatch[1])
+								}
+
+								amountRegex := regexp.MustCompile(`in the amount of \$([\d.]+)`)
+								amountMatch := amountRegex.FindStringSubmatch(body)
+								if len(amountMatch) > 1 {
+									a, err := strconv.ParseFloat(amountMatch[1], 64)
+									if err == nil {
+										transaction.Amount = a
+									} else {
+										e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
+									}
+								}
 							}
 						}
 					}
