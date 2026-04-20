@@ -192,10 +192,11 @@ func (e *EmailService) GetEmails() {
 									transaction.Name = strings.TrimSpace(merchantMatch[1])
 								}
 
-								amountRegex := regexp.MustCompile(`in the amount of \$([\d.]+)`)
+								amountRegex := regexp.MustCompile(`in the amount of \$([\d.,]+)`)
 								amountMatch := amountRegex.FindStringSubmatch(body)
 								if len(amountMatch) > 1 {
-									a, err := strconv.ParseFloat(amountMatch[1], 64)
+									sanitizedAmount := strings.ReplaceAll(amountMatch[1], ",", "")
+									a, err := strconv.ParseFloat(sanitizedAmount, 64)
 									if err == nil {
 										transaction.Amount = a
 									} else {
@@ -221,10 +222,10 @@ func (e *EmailService) GetEmails() {
 							var amountRegex *regexp.Regexp
 							processLine := false
 							if strings.Contains(l, "Your account was charged") {
-								amountRegex = regexp.MustCompile(`Your account was charged \$(\d+\.\d+)`)
+								amountRegex = regexp.MustCompile(`Your account was charged \$([\d.,]+)`)
 								processLine = true
 							} else if strings.Contains(l, "Your card was charged") {
-								amountRegex = regexp.MustCompile(`Your card was charged \$(\d+\.\d+)`)
+								amountRegex = regexp.MustCompile(`Your card was charged \$([\d.,]+)`)
 								processLine = true
 							}
 
@@ -232,6 +233,7 @@ func (e *EmailService) GetEmails() {
 								amountMatch := amountRegex.FindStringSubmatch(l)
 								if len(amountMatch) > 1 {
 									amount := strings.Replace(amountMatch[1], "$", "", -1)
+									amount = strings.ReplaceAll(amount, ",", "")
 									a, err := strconv.ParseFloat(amount, 64)
 									if err != nil {
 										e.logger.Error(fmt.Sprintf("unable to get amount: %v", err))
