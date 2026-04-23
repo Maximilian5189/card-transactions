@@ -134,7 +134,7 @@ func (e *EmailService) GetEmails() {
 			if h.Name == "Subject" &&
 				(strings.Contains(h.Value, "Transaction Alert") || strings.Contains(h.Value, "Transaction Notification") ||
 					strings.Contains(h.Value, "A charge was authorized") ||
-					strings.Contains(h.Value, "A new transaction was charged to your account") ||
+					strings.Contains(h.Value, "A new transaction was charged") ||
 					(isHSBC && strings.Contains(h.Value, "HSBC Credit Card-Transaction Notification"))) {
 				isTransaction = true
 			}
