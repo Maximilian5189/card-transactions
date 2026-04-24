@@ -186,7 +186,7 @@ func (e *EmailService) GetEmails() {
 								e.logger.Error(fmt.Sprintf("error getting content: %v", err))
 							} else {
 								body := string(bodyBytes)
-								merchantRegex := regexp.MustCompile(`,\s*at\s+(.+?),\s+a pending authorization`)
+								merchantRegex := regexp.MustCompile(`,\s*at\s+(.+?),\s+(?:a pending authorization|a purchase|a transaction|a pending authorization or purchase)`)
 								merchantMatch := merchantRegex.FindStringSubmatch(body)
 								if len(merchantMatch) > 1 {
 									transaction.Name = strings.TrimSpace(merchantMatch[1])
@@ -207,6 +207,40 @@ func (e *EmailService) GetEmails() {
 						}
 					}
 				} else if part.MimeType == "text/html" {
+					if isCapitalOne {
+						data := part.Body.Data
+						data = strings.ReplaceAll(data, "-", "+")
+						data = strings.ReplaceAll(data, "_", "/")
+
+						bodyBytes, _ := base64.StdEncoding.DecodeString(data)
+						body := string(bodyBytes)
+
+						htmlTagRe := regexp.MustCompile(`<[^>]*>`)
+						strippedBody := htmlTagRe.ReplaceAllString(body, " ")
+						strippedBody = strings.ReplaceAll(strippedBody, "&amp;", "&")
+						strippedBody = strings.ReplaceAll(strippedBody, "&nbsp;", " ")
+						strippedBody = strings.ReplaceAll(strippedBody, "&#39;", "'")
+						strippedBody = strings.ReplaceAll(strippedBody, "&rsquo;", "'")
+
+						merchantRegex := regexp.MustCompile(`,\s*at\s+(.+?),\s+(?:a pending authorization|a purchase|a transaction|a pending authorization or purchase)`)
+						merchantMatch := merchantRegex.FindStringSubmatch(strippedBody)
+
+						// Only assign if it wasn't successfully assigned by text/plain previously
+						if len(merchantMatch) > 1 && transaction.Name == "" {
+							transaction.Name = strings.TrimSpace(merchantMatch[1])
+						}
+
+						amountRegex := regexp.MustCompile(`in the amount of \$([\d.,]+)`)
+						amountMatch := amountRegex.FindStringSubmatch(strippedBody)
+						if len(amountMatch) > 1 && transaction.Amount == 0 {
+							sanitizedAmount := strings.ReplaceAll(amountMatch[1], ",", "")
+							a, err := strconv.ParseFloat(sanitizedAmount, 64)
+							if err == nil {
+								transaction.Amount = a
+							}
+						}
+					}
+
 					if isFidelity {
 						data := part.Body.Data
 						data = strings.ReplaceAll(data, "-", "+")
