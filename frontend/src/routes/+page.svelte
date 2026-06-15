@@ -32,6 +32,13 @@
 		});
 	}
 
+	function fmt(n: number) {
+		return (n ?? 0).toLocaleString('en-US', {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2
+		});
+	}
+
 	let token: string;
 	let pastWeeksToDisplay = 0;
 	let totalsPastWeeks: any[] = [];
@@ -66,6 +73,13 @@
 			}
 			return aVal < bVal ? 1 : -1;
 		});
+
+	// Display-only derived values
+	$: remainingBudget = Math.round((currBudget - totalSpentCurrent) * 100) / 100;
+	$: budgetUsedPct = currBudget > 0 ? Math.max(0, Math.round((totalSpentCurrent / currBudget) * 100)) : 0;
+	$: budgetFillPct = Math.min(100, budgetUsedPct);
+	$: viewLabel =
+		weeksOffset === 0 ? 'This week' : `${weeksOffset} week${weeksOffset === 1 ? '' : 's'} ago`;
 
 	function handleSort(column: string) {
 		if (sortColumn === column) {
@@ -198,130 +212,226 @@
 	});
 </script>
 
-<h1>Welcome to Jochen</h1>
+<div class="page">
+	<header class="app-header">
+		<div class="brand">
+			<span class="brand-mark">J</span>
+			<div>
+				<h1>Jochen</h1>
+				<p class="subtitle">Weekly spending &amp; budget</p>
+			</div>
+		</div>
 
-<div class="form-group">
-	<input type="text" class="input-field" bind:value={name} placeholder="name" />
-	<input type="number" class="input-field" bind:value={amount} placeholder="amount" />
-	<input type="date" class="input-field" bind:value={date} />
-	<button class="primary-btn" on:click={createNewTransactionHandler}>Create new transaction</button>
-</div>
+		<div class="week-nav">
+			<button class="nav-btn" on:click={increaseWeekOffset} title="Go to previous week">
+				‹ Prev
+			</button>
+			<div class="week-pill">
+				<span class="week-pill-label">{viewLabel}</span>
+				<span class="week-pill-sub">offset {weeksOffset}</span>
+			</div>
+			<button
+				class="nav-btn"
+				on:click={decreaseWeekOffset}
+				disabled={weeksOffset === 0}
+				title="Go to next week"
+			>
+				Next ›
+			</button>
+		</div>
+	</header>
 
-<div class="form-group">
-	<input
-		type="number"
-		class="input-field"
-		bind:value={pastWeeksToDisplay}
-		placeholder="past weeks to display"
-	/>
-	<button class="primary-btn" on:click={calculate}>Set past weeks</button>
-</div>
+	<!-- Summary stats -->
+	<section class="stats-grid">
+		<div class="stat-card">
+			<div class="stat-label">Spent · {viewLabel}</div>
+			<div class="stat-value">{fmt(totalSpentCurrent)}</div>
+			<div class="progress-track">
+				<div
+					class="progress-fill"
+					class:over={totalSpentCurrent > currBudget}
+					style={`width:${budgetFillPct}%`}
+				></div>
+			</div>
+			<div class="stat-foot">
+				{budgetUsedPct}% of {fmt(currBudget)} budget
+				{#if totalSpentCurrent > currBudget}
+					· <span class="over-text">{fmt(totalSpentCurrent - currBudget)} over</span>
+				{/if}
+			</div>
+		</div>
 
-<div class="form-group">
-	<button class="secondary-btn" on:click={increaseWeekOffset}>Previous week</button>
-	<button class="secondary-btn" on:click={decreaseWeekOffset}>Next week</button>
-</div>
+		<div class="stat-card">
+			<div class="stat-label">Remaining budget</div>
+			<div class="stat-value" class:neg={remainingBudget < 0} class:pos={remainingBudget >= 0}>
+				{fmt(remainingBudget)}
+			</div>
+			<div class="stat-foot">
+				{remainingBudget >= 0 ? 'left to spend this week' : 'over budget this week'}
+			</div>
+		</div>
 
-<div>week offset: {weeksOffset}</div>
+		<div class="stat-card">
+			<div class="stat-label">Total saved</div>
+			<div class="stat-value" class:neg={totalSaved < 0} class:pos={totalSaved >= 0}>
+				{fmt(totalSaved)}
+			</div>
+			<div class="stat-foot">cumulative vs. budget</div>
+		</div>
+	</section>
 
-<br />
+	<div class="columns">
+		<div class="col-main">
+			<!-- Add transaction -->
+			<section class="card">
+				<h2 class="card-title">Add transaction</h2>
+				<div class="form-grid">
+					<label class="field">
+						<span>Name</span>
+						<input type="text" class="input-field" bind:value={name} placeholder="e.g. Groceries" />
+					</label>
+					<label class="field">
+						<span>Amount</span>
+						<input type="number" class="input-field" bind:value={amount} placeholder="0.00" />
+					</label>
+					<label class="field">
+						<span>Date</span>
+						<input type="date" class="input-field" bind:value={date} />
+					</label>
+					<button class="primary-btn add-btn" on:click={createNewTransactionHandler}>
+						+ Add
+					</button>
+				</div>
+			</section>
 
-<ul>
-	{#each totalsPastWeeks as total, index}
-		<li>
-			<div>t{-index - 1}: {total[0]}, budget: {total[1]}</div>
-		</li>
-	{/each}
-</ul>
+			<!-- Transactions table -->
+			<section class="card">
+				<div class="card-head">
+					<h2 class="card-title">Transactions</h2>
+					<input
+						type="text"
+						class="input-field search"
+						bind:value={searchQuery}
+						placeholder="Search transactions…"
+					/>
+				</div>
 
-<div>
-	total saved: <span
-		style={`color: ${totalSaved < 0 ? 'var(--error-color)' : 'var(--success-color)'}`}
-		>{totalSaved}</span
-	>
-</div>
-<br />
-<div>total spent this week: {totalSpentCurrent}</div>
-<div>budget: {Math.round((currBudget - totalSpentCurrent) * 100) / 100}</div>
+				<div class="table-container">
+					<table>
+						<thead>
+							<tr>
+								<th on:click={() => handleSort('name')}>
+									Name
+									{#if sortColumn === 'name'}
+										<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+									{/if}
+								</th>
+								<th class="num" on:click={() => handleSort('amount')}>
+									Amount
+									{#if sortColumn === 'amount'}
+										<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+									{/if}
+								</th>
+								<th on:click={() => handleSort('date')}>
+									Date
+									{#if sortColumn === 'date'}
+										<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+									{/if}
+								</th>
+								<th class="actions-col">Actions</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each filteredData as row}
+								<tr>
+									<td>{row.name}</td>
+									<td class="num" class:negative-amount={row.amount < 0}>{fmt(row.amount)}</td>
+									<td>{formatDate(row.date)}</td>
+									<td class="actions-col">
+										{#if isValidTransactionId(row.messageID)}
+											<button
+												class="delete-btn"
+												on:click={() => openDeleteModal({ id: row.id, name: row.name })}
+												title="Delete transaction"
+											>
+												Delete
+											</button>
+										{:else}
+											<button
+												class="secondary-btn"
+												on:click={() => reverseTransactionHandler(row)}
+												title="Reverse transaction"
+											>
+												Reverse
+											</button>
+										{/if}
+									</td>
+								</tr>
+							{:else}
+								<tr>
+									<td colspan="4" class="empty-state">No transactions for this week.</td>
+								</tr>
+							{/each}
+						</tbody>
+					</table>
+				</div>
+			</section>
+		</div>
 
-<div class="pricing-container">
-	<!-- <div class="pricing-item">
-		<div>big snow:</div>
-		{#if isLoadingPricing}
-			<p>Loading...</p>
-		{:else}
-			{bigSnowPricing}
-		{/if}
-	</div> -->
+		<aside class="col-side">
+			<!-- Past weeks -->
+			<section class="card">
+				<div class="card-head">
+					<h2 class="card-title">Past weeks</h2>
+					<div class="weeks-control">
+						<input
+							type="number"
+							class="input-field weeks-input"
+							bind:value={pastWeeksToDisplay}
+							placeholder="weeks"
+						/>
+						<button class="secondary-btn" on:click={calculate}>Set</button>
+					</div>
+				</div>
 
-	<div class="pricing-item">
-		<div>patagonia puff:</div>
-		{#if isLoadingPricing}
-			<p>Loading...</p>
-		{:else}
-			{patagoniaNanoPuffPricing}
-		{/if}
+				<ul class="weeks-list">
+					{#each totalsPastWeeks as total, index}
+						{@const spent = total[0]}
+						{@const budget = total[1]}
+						{@const saved = Math.round((budget - spent) * 100) / 100}
+						{@const pct = Math.min(100, Math.max(0, (spent / budget) * 100))}
+						<li class="week-row">
+							<div class="week-row-top">
+								<span class="week-tag">t−{index + 1}</span>
+								<span class="week-amount">{fmt(spent)} <small>/ {fmt(budget)}</small></span>
+							</div>
+							<div class="progress-track sm">
+								<div class="progress-fill" class:over={spent > budget} style={`width:${pct}%`}></div>
+							</div>
+							<div class="week-saved" class:neg={saved < 0} class:pos={saved >= 0}>
+								{saved >= 0 ? '+' : ''}{fmt(saved)}
+							</div>
+						</li>
+					{:else}
+						<li class="empty-state">No past weeks to show.</li>
+					{/each}
+				</ul>
+			</section>
+
+			<!-- Price watch -->
+			<section class="card">
+				<h2 class="card-title">Price watch</h2>
+				<div class="pricing-item">
+					<div class="pricing-name">Patagonia Nano Puff</div>
+					{#if isLoadingPricing}
+						<div class="pricing-loading">Loading…</div>
+					{:else}
+						<div class="pricing-value">{patagoniaNanoPuffPricing}</div>
+					{/if}
+				</div>
+			</section>
+		</aside>
 	</div>
-</div>
-
-<div class="search-container">
-	<input type="text" class="input-field" bind:value={searchQuery} placeholder="Search..." />
-</div>
-
-<div class="table-container">
-	<table>
-		<thead>
-			<tr>
-				<th on:click={() => handleSort('name')}>
-					Name
-					{#if sortColumn === 'name'}
-						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-					{/if}
-				</th>
-				<th on:click={() => handleSort('amount')}>
-					Amount
-					{#if sortColumn === 'amount'}
-						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-					{/if}
-				</th>
-				<th on:click={() => handleSort('date')}>
-					Date
-					{#if sortColumn === 'date'}
-						<span class="sort-indicator">{sortDirection === 'asc' ? '↑' : '↓'}</span>
-					{/if}
-				</th>
-				<th>Actions</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each filteredData as row}
-				<tr>
-					<td>{row.name}</td>
-					<td>{row.amount}</td>
-					<td>{formatDate(row.date)}</td>
-					<td>
-						{#if isValidTransactionId(row.messageID)}
-							<button
-								class="delete-btn"
-								on:click={() => openDeleteModal({ id: row.id, name: row.name })}
-								title="Delete transaction"
-							>
-								Delete
-							</button>
-						{:else}
-							<button
-								class="secondary-btn"
-								on:click={() => reverseTransactionHandler(row)}
-								title="Reverse transaction"
-							>
-								Reverse
-							</button>
-						{/if}
-					</td>
-				</tr>
-			{/each}
-		</tbody>
-	</table>
 </div>
 
 {#if showDeleteModal && transactionToDelete}
@@ -331,10 +441,7 @@
 			<p>Are you sure you want to delete the transaction "{transactionToDelete.name}"?</p>
 			<div class="modal-actions">
 				<button class="cancel-btn" on:click={closeDeleteModal}>Cancel</button>
-				<button
-					class="delete-btn"
-					on:click={() => deleteTransactionHandler(transactionToDelete.id)}
-				>
+				<button class="delete-btn" on:click={() => deleteTransactionHandler(transactionToDelete.id)}>
 					Delete
 				</button>
 			</div>
@@ -350,197 +457,527 @@
 		--secondary-hover: #4b5563;
 		--error-color: #ef4444;
 		--error-hover: #dc2626;
-		--success-color: #22c55e;
-		--border-color: #e2e8f0;
-		--background-color: white;
-		--text-color: #374151;
+		--success-color: #16a34a;
+		--border-color: #e5e7eb;
+		--background-color: #ffffff;
+		--surface-color: #ffffff;
+		--page-bg: #f4f6fb;
+		--text-color: #1f2937;
+		--text-muted: #6b7280;
+		--shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 12px rgba(16, 24, 40, 0.06);
+		--radius: 14px;
 	}
 
 	@media (prefers-color-scheme: dark) {
 		:root {
-			--primary-color: #2563eb;
-			--primary-hover: #1d4ed8;
+			--primary-color: #3b82f6;
+			--primary-hover: #60a5fa;
 			--secondary-color: #4b5563;
-			--secondary-hover: #374151;
-			--error-color: #dc2626;
-			--error-hover: #b91c1c;
-			--success-color: #16a34a;
-			--border-color: #374151;
-			--background-color: #1a1a1a;
+			--secondary-hover: #6b7280;
+			--error-color: #ef4444;
+			--error-hover: #f87171;
+			--success-color: #22c55e;
+			--border-color: #2b3344;
+			--background-color: #161a23;
+			--surface-color: #1b2030;
+			--page-bg: #0e1117;
 			--text-color: #e5e7eb;
+			--text-muted: #9aa4b2;
+			--shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
 		}
 	}
 
-	.form-group {
+	:global(body) {
+		margin: 0;
+		background-color: var(--page-bg);
+		color: var(--text-color);
+		font-family:
+			'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+		-webkit-font-smoothing: antialiased;
+	}
+
+	.page {
+		max-width: 1080px;
+		margin: 0 auto;
+		padding: 1.5rem 1.25rem 4rem;
+	}
+
+	/* Header */
+	.app-header {
 		display: flex;
+		align-items: center;
+		justify-content: space-between;
 		gap: 1rem;
+		flex-wrap: wrap;
+		margin-bottom: 1.5rem;
+	}
+
+	.brand {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+
+	.brand-mark {
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		background: linear-gradient(135deg, var(--primary-color), #8b5cf6);
+		color: #fff;
+		font-weight: 700;
+		font-size: 1.25rem;
+		box-shadow: var(--shadow);
+	}
+
+	.brand h1 {
+		margin: 0;
+		font-size: 1.4rem;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+	}
+
+	.subtitle {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--text-muted);
+	}
+
+	.week-nav {
+		display: flex;
+		align-items: stretch;
+		gap: 0.5rem;
+	}
+
+	.week-pill {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		min-width: 120px;
+		padding: 0.25rem 0.9rem;
+		background: var(--surface-color);
+		border: 1px solid var(--border-color);
+		border-radius: 10px;
+		box-shadow: var(--shadow);
+	}
+
+	.week-pill-label {
+		font-weight: 600;
+		font-size: 0.85rem;
+	}
+
+	.week-pill-sub {
+		font-size: 0.7rem;
+		color: var(--text-muted);
+	}
+
+	/* Stats */
+	.stats-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.stat-card {
+		background: var(--surface-color);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		padding: 1.1rem 1.2rem;
+		box-shadow: var(--shadow);
+	}
+
+	.stat-label {
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		color: var(--text-muted);
+		font-weight: 600;
+	}
+
+	.stat-value {
+		font-size: 1.85rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+		margin: 0.3rem 0 0.5rem;
+	}
+
+	.stat-value.pos {
+		color: var(--success-color);
+	}
+
+	.stat-value.neg {
+		color: var(--error-color);
+	}
+
+	.stat-foot {
+		font-size: 0.78rem;
+		color: var(--text-muted);
+	}
+
+	.progress-track {
+		height: 8px;
+		background: var(--border-color);
+		border-radius: 999px;
+		overflow: hidden;
+		margin: 0.35rem 0 0.5rem;
+	}
+
+	.progress-track.sm {
+		height: 6px;
+		margin: 0.3rem 0;
+	}
+
+	.progress-fill {
+		height: 100%;
+		background: var(--primary-color);
+		border-radius: 999px;
+		transition: width 0.35s ease;
+	}
+
+	.progress-fill.over {
+		background: var(--error-color);
+	}
+
+	.over-text {
+		color: var(--error-color);
+		font-weight: 600;
+	}
+
+	/* Layout columns */
+	.columns {
+		display: grid;
+		grid-template-columns: 1.6fr 1fr;
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.col-main,
+	.col-side {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+	}
+
+	/* Cards */
+	.card {
+		background: var(--surface-color);
+		border: 1px solid var(--border-color);
+		border-radius: var(--radius);
+		padding: 1.2rem;
+		box-shadow: var(--shadow);
+	}
+
+	.card-title {
+		margin: 0;
+		font-size: 1rem;
+		font-weight: 600;
+	}
+
+	.card-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
 		margin-bottom: 1rem;
 		flex-wrap: wrap;
-		align-items: center;
+	}
+
+	/* Forms */
+	.form-grid {
+		display: grid;
+		grid-template-columns: 1.4fr 1fr 1fr auto;
+		gap: 0.75rem;
+		align-items: end;
+		margin-top: 1rem;
+	}
+
+	.field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		font-size: 0.75rem;
+		color: var(--text-muted);
+		font-weight: 600;
 	}
 
 	.input-field {
-		padding: 0.5rem 1rem;
+		padding: 0.55rem 0.75rem;
 		border: 1px solid var(--border-color);
-		border-radius: 0.25rem;
-		font-size: 0.875rem;
+		border-radius: 9px;
+		font-size: 0.9rem;
 		background-color: var(--background-color);
 		color: var(--text-color);
-		min-width: 150px;
+		width: 100%;
+		box-sizing: border-box;
+		transition:
+			border-color 0.15s,
+			box-shadow 0.15s;
 	}
 
 	.input-field:focus {
 		outline: none;
 		border-color: var(--primary-color);
-		box-shadow: 0 0 0 1px var(--primary-color);
+		box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
 	}
 
-	.primary-btn,
-	.nav-btn {
+	.search {
+		max-width: 260px;
+	}
+
+	.weeks-control {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.weeks-input {
+		width: 80px;
+	}
+
+	/* Buttons */
+	.primary-btn {
 		background-color: var(--primary-color);
 		color: white;
 		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 0.25rem;
+		padding: 0.55rem 1.1rem;
+		border-radius: 9px;
 		cursor: pointer;
-		font-size: 0.875rem;
-		transition: background-color 0.2s;
+		font-size: 0.9rem;
+		font-weight: 600;
+		transition:
+			background-color 0.15s,
+			transform 0.05s;
 	}
 
-	.primary-btn:hover,
-	.nav-btn:hover {
+	.primary-btn:hover {
 		background-color: var(--primary-hover);
 	}
 
+	.primary-btn:active {
+		transform: translateY(1px);
+	}
+
+	.add-btn {
+		height: fit-content;
+	}
+
 	.secondary-btn {
-		background-color: var(--secondary-color);
-		color: white;
-		border: none;
-		padding: 0.5rem 1rem;
-		border-radius: 0.25rem;
+		background-color: transparent;
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
+		padding: 0.5rem 0.9rem;
+		border-radius: 9px;
 		cursor: pointer;
-		font-size: 0.875rem;
-		transition: background-color 0.2s;
+		font-size: 0.85rem;
+		font-weight: 600;
+		transition: background-color 0.15s;
 	}
 
 	.secondary-btn:hover {
-		background-color: var(--secondary-hover);
+		background-color: var(--page-bg);
+		border-color: var(--secondary-hover);
+	}
+
+	.nav-btn {
+		background-color: var(--surface-color);
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
+		padding: 0 0.85rem;
+		border-radius: 10px;
+		cursor: pointer;
+		font-size: 0.85rem;
+		font-weight: 600;
+		box-shadow: var(--shadow);
+		transition: background-color 0.15s;
+	}
+
+	.nav-btn:hover:not(:disabled) {
+		background-color: var(--page-bg);
+	}
+
+	.nav-btn:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
 	}
 
 	.delete-btn {
 		background-color: var(--error-color);
 		color: white;
 		border: none;
-		padding: 0.25rem 0.75rem;
-		border-radius: 0.25rem;
+		padding: 0.35rem 0.8rem;
+		border-radius: 8px;
 		cursor: pointer;
-		font-size: 0.875rem;
-		transition: background-color 0.2s;
+		font-size: 0.82rem;
+		font-weight: 600;
+		transition: background-color 0.15s;
 	}
 
 	.delete-btn:hover {
 		background-color: var(--error-hover);
 	}
 
+	/* Table */
 	.table-container {
-		margin: 1rem 0;
 		border: 1px solid var(--border-color);
-		border-radius: 0.5rem;
+		border-radius: 10px;
 		overflow: hidden;
-	}
-
-	@media (prefers-color-scheme: dark) {
-		:global(body) {
-			background-color: #1a1a1a;
-			color: #e5e7eb;
-		}
-
-		.table-container {
-			border-color: #374151;
-		}
-
-		input[type='text'],
-		input[type='number'],
-		input[type='date'] {
-			background-color: #2d2d2d;
-			border: 1px solid #4b5563;
-			color: #e5e7eb;
-		}
-
-		input::placeholder {
-			color: #9ca3af;
-		}
-
-		.search-input {
-			background-color: #2d2d2d;
-			border-color: #4b5563;
-			color: #e5e7eb;
-		}
-	}
-
-	.search-container {
-		margin-bottom: 1rem;
-	}
-
-	.search-input {
-		padding: 0.5rem;
-		border: 1px solid var(--border-color);
-		border-radius: 0.25rem;
-		width: 100%;
-		max-width: 300px;
 	}
 
 	table {
 		width: 100%;
 		border-collapse: collapse;
-		background-color: var(--background-color);
+		background-color: var(--surface-color);
+		font-size: 0.9rem;
 	}
 
 	th {
-		background-color: var(--secondary-color);
-		color: white;
+		background-color: var(--page-bg);
+		color: var(--text-muted);
 		font-weight: 600;
+		font-size: 0.75rem;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
 		cursor: pointer;
-		transition: background-color 0.2s;
+		user-select: none;
+		transition: color 0.15s;
 	}
 
 	th:hover {
-		background-color: var(--secondary-hover);
-	}
-
-	@media (prefers-color-scheme: dark) {
-		table {
-			background-color: #2d2d2d;
-		}
-
-		td {
-			border-color: #374151;
-		}
-
-		tr:hover {
-			background-color: #374151;
-		}
+		color: var(--text-color);
 	}
 
 	th,
 	td {
-		padding: 0.75rem;
+		padding: 0.7rem 0.9rem;
 		text-align: left;
 		border-bottom: 1px solid var(--border-color);
 	}
 
-	.sort-indicator {
-		display: inline-block;
-		margin-left: 0.5rem;
+	tbody tr:last-child td {
+		border-bottom: none;
 	}
 
+	tbody tr:hover {
+		background-color: var(--page-bg);
+	}
+
+	.num {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.negative-amount {
+		color: var(--success-color);
+	}
+
+	.actions-col {
+		text-align: right;
+		width: 1%;
+		white-space: nowrap;
+	}
+
+	.sort-indicator {
+		display: inline-block;
+		margin-left: 0.25rem;
+	}
+
+	.empty-state {
+		text-align: center;
+		color: var(--text-muted);
+		padding: 1.5rem;
+		font-size: 0.9rem;
+	}
+
+	/* Past weeks list */
+	.weeks-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.85rem;
+	}
+
+	.week-row {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 0.15rem;
+	}
+
+	.week-row-top {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+	}
+
+	.week-tag {
+		font-size: 0.72rem;
+		font-weight: 700;
+		color: var(--text-muted);
+		background: var(--page-bg);
+		padding: 0.1rem 0.45rem;
+		border-radius: 6px;
+	}
+
+	.week-amount {
+		font-variant-numeric: tabular-nums;
+		font-weight: 600;
+		font-size: 0.9rem;
+	}
+
+	.week-amount small {
+		color: var(--text-muted);
+		font-weight: 400;
+	}
+
+	.week-saved {
+		font-size: 0.78rem;
+		font-weight: 600;
+		text-align: right;
+	}
+
+	.week-saved.pos {
+		color: var(--success-color);
+	}
+
+	.week-saved.neg {
+		color: var(--error-color);
+	}
+
+	/* Pricing */
+	.pricing-item {
+		margin-top: 0.85rem;
+		padding: 0.9rem 1rem;
+		border: 1px solid var(--border-color);
+		border-radius: 10px;
+		background: var(--page-bg);
+	}
+
+	.pricing-name {
+		font-weight: 600;
+		font-size: 0.9rem;
+		margin-bottom: 0.35rem;
+	}
+
+	.pricing-value {
+		font-size: 0.82rem;
+		color: var(--text-muted);
+		word-break: break-word;
+	}
+
+	.pricing-loading {
+		font-size: 0.85rem;
+		color: var(--text-muted);
+	}
+
+	/* Modal */
 	.modal-backdrop {
 		position: fixed;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
+		inset: 0;
 		background-color: rgba(0, 0, 0, 0.5);
+		backdrop-filter: blur(2px);
 		display: flex;
 		justify-content: center;
 		align-items: center;
@@ -548,25 +985,23 @@
 	}
 
 	.modal {
-		background-color: var(--background-color);
+		background-color: var(--surface-color);
 		color: var(--text-color);
 		padding: 1.5rem;
-		border-radius: 0.5rem;
-		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+		border-radius: var(--radius);
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
 		max-width: 400px;
 		width: 90%;
 	}
 
 	.modal h2 {
-		margin: 0 0 1rem 0;
-		font-size: 1.25rem;
-		color: var(--text-color);
+		margin: 0 0 0.75rem 0;
+		font-size: 1.2rem;
 	}
 
 	.modal p {
 		margin: 0 0 1.5rem 0;
-		color: var(--text-color);
-		opacity: 0.8;
+		color: var(--text-muted);
 	}
 
 	.modal-actions {
@@ -575,82 +1010,50 @@
 		gap: 0.75rem;
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.modal {
-			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-		}
-
-		.modal-backdrop {
-			background-color: rgba(0, 0, 0, 0.7);
-		}
-	}
-
 	.cancel-btn {
-		background-color: var(--secondary-color);
-		color: white;
-		border: none;
+		background-color: transparent;
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
 		padding: 0.5rem 1rem;
-		border-radius: 0.25rem;
+		border-radius: 9px;
 		cursor: pointer;
-		font-size: 0.875rem;
-		transition: background-color 0.2s;
+		font-size: 0.9rem;
+		font-weight: 600;
+		transition: background-color 0.15s;
 	}
 
 	.cancel-btn:hover {
-		background-color: var(--secondary-hover);
+		background-color: var(--page-bg);
 	}
 
-	.pricing-container {
-		display: flex;
-		flex-direction: row;
-		gap: 2rem;
-		flex-wrap: wrap;
-		margin: 2rem 0;
+	/* Responsive */
+	@media (max-width: 880px) {
+		.columns {
+			grid-template-columns: 1fr;
+		}
 	}
 
-	.pricing-item {
-		flex: 1;
-		min-width: 250px;
-		padding: 1rem;
-		border: 1px solid #ccc;
-		border-radius: 8px;
-	}
+	@media (max-width: 720px) {
+		.stats-grid {
+			grid-template-columns: 1fr;
+		}
 
-	@media (max-width: 768px) {
-		.pricing-container {
+		.form-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+
+		.add-btn {
+			grid-column: 1 / -1;
+		}
+
+		.app-header {
 			flex-direction: column;
+			align-items: flex-start;
 		}
 
-		.pricing-item {
-			width: 100%;
-		}
-	}
-
-	.html-content {
-		margin-top: 20px;
-		padding: 15px;
-		background-color: #f3f4f6;
-		border-radius: 4px;
-		overflow-x: auto;
-		border: 1px solid var(--border-color);
-	}
-
-	.html-content pre {
-		white-space: pre-wrap;
-		word-wrap: break-word;
-		font-family: monospace;
-		margin: 0;
-		color: var(--text-color);
-	}
-
-	@media (prefers-color-scheme: dark) {
-		.html-content {
-			background-color: #2d2d2d;
-			border-color: #374151;
-		}
-
-		.html-content pre {
-			color: #e5e7eb;
+		.search {
+			max-width: 100%;
+			flex: 1;
 		}
 	}
 </style>
