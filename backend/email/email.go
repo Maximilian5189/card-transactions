@@ -303,7 +303,8 @@ func (e *EmailService) GetEmails() {
 			strings.Contains(transaction.Name, "SYNERGY FITNESS") ||
 			strings.Contains(transaction.Name, "SPOTIFY") ||
 			strings.Contains(transaction.Name, "US MOBILE") ||
-			strings.Contains(transaction.Name, "SQ *ALMA") {
+			strings.Contains(transaction.Name, "SQ *ALMA") ||
+			strings.Contains(transaction.Name, "Verizon") {
 			transaction.Amount = 0
 		}
 		err = e.db.Insert(transaction)
